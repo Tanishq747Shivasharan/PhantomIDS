@@ -1,29 +1,34 @@
 #include <WiFi.h>
 #include <LiquidCrystal_I2C.h>
 
+// ─── CONFIGURATION ─────────────────────────────────────────────────────────
 const char* SSID          = "<WiFi Name>";
 const char* PASSWORD      = "<WiFi Password>";
 const char* HONEYPOT_IP   = "192.168.1.6";
 const int   HONEYPOT_PORT = 5000;
 const int   LISTEN_PORT   = 5000;
 
+// Static IP for the ESP32 sensor
 IPAddress local_IP(192, 168, 1, 30);
 IPAddress gateway(192, 168, 1,  1);
 IPAddress subnet(255, 255, 255,  0);
 IPAddress dns(8, 8, 8, 8);
 
+// ─── HARDWARE ──────────────────────────────────────────────────────────────
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-#define BUZZER_PIN  13   
-#define LED_GREEN   26   
-#define LED_RED     25   
+#define BUZZER_PIN  13
+#define LED_GREEN   26
+#define LED_RED     25
 
 WiFiServer server(LISTEN_PORT);
 
+// ─── COUNTERS ──────────────────────────────────────────────────────────────
 int totalRequests = 0;
 int alertCount    = 0;
 int warnCount     = 0;
 
+// ─── DETECTION SIGNATURES (20 keywords) ────────────────────────────────────
 const char* SQL_KEYWORDS[] = {
   " OR ", " AND ", "UNION", "SELECT", "INSERT",
   "DROP", "DELETE", "UPDATE", "FROM", "WHERE",
@@ -32,6 +37,7 @@ const char* SQL_KEYWORDS[] = {
 };
 const int KEYWORD_COUNT = 20;
 
+// ─── LED / BUZZER HELPERS ──────────────────────────────────────────────────
 void setIdle() {
   digitalWrite(LED_GREEN, HIGH);
   digitalWrite(LED_RED,   LOW);
@@ -39,7 +45,6 @@ void setIdle() {
 
 void setWarning() {
   digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_RED,   LOW);
   delay(200);
   digitalWrite(LED_GREEN, HIGH);
 }
@@ -49,13 +54,6 @@ void setAlert() {
   digitalWrite(LED_RED,   HIGH);
 }
 
-void blinkRed(int times) {
-  for (int i = 0; i < times; i++) {
-    digitalWrite(LED_RED, HIGH); delay(150);
-    digitalWrite(LED_RED, LOW);  delay(150);
-  }
-}
-
 void beep(int times, int ms = 80) {
   for (int i = 0; i < times; i++) {
     digitalWrite(BUZZER_PIN, HIGH); delay(ms);
@@ -63,6 +61,7 @@ void beep(int times, int ms = 80) {
   }
 }
 
+// ─── PAYLOAD ANALYSIS ──────────────────────────────────────────────────────
 String urlDecode(const String& encoded) {
   String decoded = "";
   int len = encoded.length();
@@ -111,9 +110,62 @@ String extractField(const String& body, const String& field) {
   return body.substring(start, end);
 }
 
+int detectSQLi(const String& body, String& decodedOut) {
+  if (body.length() == 0) return 0;
+  decodedOut   = urlDecode(body);
+  bool signal1 = hasQuote(decodedOut);
+  bool signal2 = hasSQLKeyword(decodedOut);
+  return (signal1 ? 1 : 0) + (signal2 ? 1 : 0);
+}
+
+// ─── POST ALERT TO FLASK ───────────────────────────────────────────────────
+/**
+ * After detecting a confirmed SQLi (score >= 2), the ESP32 POSTs a JSON
+ * alert to the Flask honeypot's /api/esp32/alert endpoint.
+ * Flask then saves it locally and syncs it to Supabase.
+ */
+void postAlertToFlask(const String& attackerIP, const String& payload, int score) {
+  WiFiClient client;
+  if (!client.connect(HONEYPOT_IP, HONEYPOT_PORT)) {
+    Serial.println("[ALERT POST] Could not reach Flask — skipping cloud report");
+    return;
+  }
+
+  // Escape payload for JSON (replace " and \ only — good enough for alert data)
+  String safePayload = payload;
+  safePayload.replace("\\", "\\\\");
+  safePayload.replace("\"", "\\\"");
+
+  String body =
+    "{\"attacker_ip\":\"" + attackerIP + "\","
+    "\"payload\":\""     + safePayload + "\","
+    "\"score\":"         + String(score) + "}";
+
+  String httpReq =
+    "POST /api/esp32/alert HTTP/1.1\r\n"
+    "Host: " + String(HONEYPOT_IP) + "\r\n"
+    "Content-Type: application/json\r\n"
+    "Content-Length: " + String(body.length()) + "\r\n"
+    "Connection: close\r\n\r\n" + body;
+
+  client.print(httpReq);
+
+  unsigned long t = millis();
+  while (client.connected() && (millis() - t < 2000)) {
+    if (client.available()) {
+      String line = client.readStringUntil('\n');
+      if (line.startsWith("HTTP/1.1")) {
+        Serial.println("[ALERT POST] Flask response: " + line);
+        break;
+      }
+    }
+  }
+  client.stop();
+}
+
+// ─── LCD + PHYSICAL ALERT ──────────────────────────────────────────────────
 void showAlert(int score, const String& attackerIP, const String& payload) {
   if (score >= 2) {
-
     setAlert();
 
     lcd.clear();
@@ -134,9 +186,8 @@ void showAlert(int score, const String& attackerIP, const String& payload) {
       delay(120);
     }
 
-    delay(2000); 
+    delay(2000);
 
-    // Show running totals
     lcd.clear();
     lcd.setCursor(0, 0); lcd.print("Alerts: "); lcd.print(alertCount);
     lcd.setCursor(0, 1); lcd.print("Warns:  "); lcd.print(warnCount);
@@ -145,28 +196,20 @@ void showAlert(int score, const String& attackerIP, const String& payload) {
     setAlert();
 
   } else if (score == 1) {
-    setWarning(); 
+    setWarning();
 
     lcd.clear();
     lcd.setCursor(0, 0); lcd.print("WARN: Suspicious");
     String ipSnip = "IP:" + attackerIP.substring(attackerIP.lastIndexOf('.'));
     lcd.setCursor(0, 1); lcd.print(ipSnip);
 
-    beep(1); 
+    beep(1);
     delay(1000);
-
-    setIdle(); 
+    setIdle();
   }
 }
 
-int detectSQLi(const String& body, String& decodedOut) {
-  if (body.length() == 0) return 0;
-  decodedOut      = urlDecode(body);
-  bool signal1    = hasQuote(decodedOut);
-  bool signal2    = hasSQLKeyword(decodedOut);
-  return (signal1 ? 1 : 0) + (signal2 ? 1 : 0);
-}
-
+// ─── SETUP ─────────────────────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
   delay(500);
@@ -175,13 +218,10 @@ void setup() {
   pinMode(LED_GREEN,  OUTPUT); digitalWrite(LED_GREEN,  LOW);
   pinMode(LED_RED,    OUTPUT); digitalWrite(LED_RED,    LOW);
 
-  Serial.println("\n[HW]   LED self-test...");
-  digitalWrite(LED_GREEN, HIGH); delay(400);
-  digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_RED,   HIGH); delay(400);
-  digitalWrite(LED_RED,   LOW);
+  // LED self-test
+  digitalWrite(LED_GREEN, HIGH); delay(400); digitalWrite(LED_GREEN, LOW);
+  digitalWrite(LED_RED,   HIGH); delay(400); digitalWrite(LED_RED,   LOW);
   beep(1);
-  Serial.println("[HW]   LED self-test done");
 
   lcd.init();
   lcd.backlight();
@@ -192,9 +232,10 @@ void setup() {
   WiFi.begin(SSID, PASSWORD);
 
   Serial.println("========================================");
-  Serial.println("  PhantomIDS — FULL IDS MODE");
+  Serial.println("  PhantomIDS — FULL IDS + CLOUD MODE");
   Serial.println("  Green LED D26 = idle/monitoring");
   Serial.println("  Red LED   D25 = attack detected");
+  Serial.println("  Alerts now sync to Supabase via Flask");
   Serial.println("========================================");
   Serial.print("[WiFi] Connecting");
 
@@ -210,16 +251,13 @@ void setup() {
 
   Serial.println("\n[WiFi] Connected! IP: " + WiFi.localIP().toString());
   Serial.print("[WiFi] RSSI: "); Serial.print(WiFi.RSSI()); Serial.println(" dBm");
-  Serial.println("[IDS]  Detection engine : ACTIVE");
-  Serial.println("[IDS]  URL decoding     : ENABLED");
-  Serial.println("[IDS]  Threshold        : 2 signals = ALERT");
-  Serial.println("[IDS]  Keywords loaded  : " + String(KEYWORD_COUNT));
-  Serial.println("[HW]   Green LED (D26)  : IDLE indicator");
-  Serial.println("[HW]   Red LED   (D25)  : ALERT indicator");
+  Serial.println("[IDS]  Detection engine  : ACTIVE");
+  Serial.println("[IDS]  Cloud reporting   : ENABLED (Flask /api/esp32/alert)");
+  Serial.println("[IDS]  Threshold         : 2 signals = ALERT");
+  Serial.println("[IDS]  Keywords loaded   : " + String(KEYWORD_COUNT));
   Serial.println("\n[IDS]  Listening on port " + String(LISTEN_PORT) + "...\n");
 
   server.begin();
-
   setIdle();
 
   lcd.clear();
@@ -232,6 +270,7 @@ void setup() {
   lcd.setCursor(0, 1); lcd.print("Alerts: 0       ");
 }
 
+// ─── MAIN LOOP ─────────────────────────────────────────────────────────────
 void loop() {
   WiFiClient client = server.available();
   if (!client) return;
@@ -239,6 +278,7 @@ void loop() {
   totalRequests++;
   String attackerIP = client.remoteIP().toString();
 
+  // Read full HTTP request (up to 4KB, 3s timeout)
   String rawRequest = "";
   unsigned long t0 = millis();
   while (client.connected() && (millis() - t0 < 3000)) {
@@ -280,7 +320,11 @@ void loop() {
       Serial.print("[ALERT #"); Serial.print(alertCount); Serial.println("] SQLI DETECTED");
       Serial.print("[ALERT] Attacker : "); Serial.println(attackerIP);
       Serial.print("[ALERT] Payload  : "); Serial.println(userPayload.substring(0, 60));
+
       showAlert(2, attackerIP, userPayload);
+
+      // ── NEW: Report to Flask → Supabase ───────────────────
+      postAlertToFlask(attackerIP, userPayload, score);
 
     } else if (score == 1) {
       warnCount++;
@@ -293,9 +337,10 @@ void loop() {
     }
   } else {
     Serial.println("[SKIP] GET — no body");
-    setIdle(); 
+    setIdle();
   }
 
+  // Forward raw request to Flask honeypot
   WiFiClient hp;
   String hpResponse = "";
 
@@ -318,6 +363,7 @@ void loop() {
   client.print(hpResponse);
   client.stop();
 
+  // Update LCD status line
   if (score < 2) {
     lcd.setCursor(0, 0); lcd.print("Monitoring :5000");
     String line2 = "A:" + String(alertCount) +

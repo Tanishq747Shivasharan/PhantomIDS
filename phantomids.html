@@ -9,6 +9,7 @@
 <meta property="og:description" content="Hardware-Level SQL Injection Detection. Built on ESP32.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #0A0E1A;
@@ -577,7 +578,7 @@ footer {
     <a href="#pricing">Pricing</a>
     <a href="#register">Register</a>
   </div>
-  <button class="nav-cta" onclick="document.getElementById('register').scrollIntoView({behavior:'smooth'})">Request Early Access</button>
+  <button class="nav-cta" onclick="document.getElementById('register-section').scrollIntoView({behavior:'smooth'})">Request Early Access</button>
 </nav>
 
 <!-- HERO -->
@@ -596,7 +597,7 @@ footer {
   <div class="hero-tagline">"You can't rm -rf a chip."</div>
   <div class="hero-ctas">
     <a href="#how-it-works" class="btn-primary">See How It Works</a>
-    <button class="btn-ghost" onclick="document.getElementById('register').scrollIntoView({behavior:'smooth'})">Request Early Access</button>
+    <button class="btn-ghost" onclick="document.getElementById('register-section').scrollIntoView({behavior:'smooth'})">Request Early Access</button>
   </div>
 </section>
 
@@ -854,7 +855,7 @@ footer {
     </div>
   </div>
   <div style="margin-top:20px; text-align:center;">
-    <button class="btn-ghost" onclick="document.getElementById('register').scrollIntoView({behavior:'smooth'})">Join v2.0 Waitlist — ML Features</button>
+    <button class="btn-ghost" onclick="document.getElementById('register-section').scrollIntoView({behavior:'smooth'})">Join v2.0 Waitlist — ML Features</button>
   </div>
 </section>
 
@@ -961,18 +962,18 @@ footer {
         <li>1 month email support</li>
         <li>Priority v2.0 access</li>
       </ul>
-      <button class="pricing-cta solid" onclick="document.getElementById('register').scrollIntoView({behavior:'smooth'})">Request Early Access</button>
+      <button class="pricing-cta solid" onclick="document.getElementById('register-section').scrollIntoView({behavior:'smooth'})">Request Early Access</button>
     </div>
   </div>
   <div style="margin-top:24px; padding:20px 28px; border-left:3px solid var(--accent); background:rgba(0,255,136,0.04); border-radius:0 8px 8px 0; font-size:15px; color:var(--muted); line-height:1.7;">
-    Even if you never sell a single kit — having a pricing section makes this look like a <em style="color:var(--body)">real product</em>, not a homework assignment. It signals you've thought about real-world deployment.
+    Pre-Built Kits ship with pre-flashed firmware, assembled hardware, a setup guide booklet, and one month of dedicated onboarding support. <em style="color:var(--body)">No soldering required.</em>
   </div>
 </div>
 </section>
 
-<!-- SECTION 11: REGISTER -->
-<section id="register" style="max-width:100%;padding:0;">
-<div id="register" style="background:linear-gradient(135deg,rgba(0,255,136,0.05),rgba(230,57,70,0.03)); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:100px 48px;">
+<!-- SECTION 12: REGISTER -->
+<section id="register-section" style="max-width:100%;padding:0;">
+<div style="background:linear-gradient(135deg,rgba(0,255,136,0.05),rgba(230,57,70,0.03)); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:100px 48px;">
   <div class="register-inner">
     <div class="section-tag" style="text-align:center">// 12 — ORGANIZATION REGISTRATION</div>
     <h2 class="section-title" style="text-align:center">Interested in deploying PhantomIDS in your organization?</h2>
@@ -980,20 +981,20 @@ footer {
     <div class="register-form">
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label">Organization Name</label>
-          <input class="form-input" type="text" placeholder="Acme IT Solutions">
+          <label class="form-label" for="reg-org-name">Organization Name</label>
+          <input class="form-input" id="reg-org-name" type="text" placeholder="Acme IT Solutions">
         </div>
         <div class="form-group">
-          <label class="form-label">Contact Name</label>
-          <input class="form-input" type="text" placeholder="Your full name">
+          <label class="form-label" for="reg-contact">Contact Name</label>
+          <input class="form-input" id="reg-contact" type="text" placeholder="Your full name">
         </div>
         <div class="form-group">
-          <label class="form-label">Work Email</label>
-          <input class="form-input" type="email" placeholder="you@company.com">
+          <label class="form-label" for="reg-email">Work Email</label>
+          <input class="form-input" id="reg-email" type="email" placeholder="you@company.com">
         </div>
         <div class="form-group">
-          <label class="form-label">Your Role</label>
-          <select class="form-select">
+          <label class="form-label" for="reg-role">Your Role</label>
+          <select class="form-select" id="reg-role">
             <option>IT Manager</option>
             <option>CTO</option>
             <option>Security Engineer</option>
@@ -1001,9 +1002,19 @@ footer {
             <option>Other</option>
           </select>
         </div>
-        <div class="form-group full">
-          <label class="form-label">Use Case</label>
-          <select class="form-select">
+        <div class="form-group">
+          <label class="form-label" for="reg-size">Company Size</label>
+          <select class="form-select" id="reg-size">
+            <option>1–10 employees</option>
+            <option>11–50 employees</option>
+            <option>51–200 employees</option>
+            <option>201–1000 employees</option>
+            <option>1000+ employees</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-usecase">Use Case</label>
+          <select class="form-select" id="reg-usecase">
             <option>Internal network monitoring</option>
             <option>Cybersecurity training lab</option>
             <option>Compliance / DPDP Act audit evidence</option>
@@ -1012,8 +1023,9 @@ footer {
           </select>
         </div>
       </div>
-      <button class="form-submit" onclick="handleRegister(this)">Register Interest — Early Access</button>
+      <button class="form-submit" id="reg-submit-btn" onclick="handleRegister(this)">Register Interest — Early Access</button>
       <div class="social-proof" id="social-proof-text">Join organizations already on the waitlist</div>
+      <div id="reg-error" style="margin-top:12px;color:#E63946;font-size:13px;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
     </div>
   </div>
 </div>
@@ -1204,15 +1216,58 @@ const termObs = new IntersectionObserver(entries => {
 }, {threshold: 0.3});
 termObs.observe(document.getElementById('demo'));
 
+// ──────────── SUPABASE INIT ────────────
+const { createClient } = supabase;
+const _supa = createClient(
+  'https://udfwttjfyhszvxhpnwnp.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZnd0dGpmeWhzenZ4aHBud25wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTU2NzQsImV4cCI6MjA5MDA5MTY3NH0.T-B1yDvFr8TQKFF3QNnzhXFX-1OQ3ZJ1mwsoIll72Sg'
+);
+
 // ──────────── REGISTER ────────────
-let regCount = 3;
-function handleRegister(btn) {
-  btn.textContent = '✓ Registered! We\'ll be in touch within 48 hours.';
-  btn.style.background = '#1a3d2b';
-  btn.style.color = 'var(--accent)';
+async function handleRegister(btn) {
+  const orgName  = document.getElementById('reg-org-name').value.trim();
+  const contact  = document.getElementById('reg-contact').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const role     = document.getElementById('reg-role').value;
+  const size     = document.getElementById('reg-size').value;
+  const useCase  = document.getElementById('reg-usecase').value;
+  const errEl    = document.getElementById('reg-error');
+
+  errEl.textContent = '';
+
+  if (!orgName || !contact || !email) {
+    errEl.textContent = '✗ Please fill in Organization Name, Contact Name, and Work Email.';
+    return;
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    errEl.textContent = '✗ Please enter a valid work email address.';
+    return;
+  }
+
+  btn.textContent = 'Submitting...';
   btn.disabled = true;
-  regCount++;
-  document.getElementById('social-proof-text').textContent = `${regCount} organizations already on the waitlist`;
+
+  const { error } = await _supa.from('organizations').insert({
+    org_name:     orgName,
+    contact_name: contact,
+    work_email:   email,
+    role:         role,
+    company_size: size,
+    use_case:     useCase,
+    status:       'pending'
+  });
+
+  if (error) {
+    errEl.textContent = '✗ ' + (error.message.includes('unique') ? 'This email is already registered.' : error.message);
+    btn.textContent = 'Register Interest — Early Access';
+    btn.disabled = false;
+    return;
+  }
+
+  btn.textContent = '✓ Registered! We\'ll be in touch within 48 hours.';
+  btn.style.background = '#0d2d1e';
+  btn.style.color = 'var(--accent)';
+  document.getElementById('social-proof-text').textContent = 'Your request has been received. We\'ll review and respond within 48 hours.';
 }
 </script>
 </body>

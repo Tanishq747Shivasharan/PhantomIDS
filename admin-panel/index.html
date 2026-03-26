@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhantomIDS — Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap"
+    rel="stylesheet">
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    :root {
+      --bg: #0A0E1A;
+      --card: #1E2D40;
+      --accent: #00FF88;
+      --red: #E63946;
+      --body: #F0F0F0;
+      --muted: #8892A4;
+      --border: rgba(0, 255, 136, 0.12);
+      --panel: #141c2e;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--body);
+    }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(0, 255, 136, 0.05) 0%, transparent 70%);
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 40px;
+      width: 420px;
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    .login-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .login-logo span {
+      color: var(--red);
+    }
+
+    .login-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      margin-bottom: 32px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .field input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--body);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-full {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .btn-full:hover {
+      opacity: 0.85;
+    }
+
+    .login-error {
+      margin-top: 12px;
+      color: var(--red);
+      font-size: 13px;
+      min-height: 20px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── APP SHELL ── */
+    #app {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .hdr-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .hdr-logo span {
+      color: var(--red);
+    }
+
+    .hdr-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .hdr-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: rgba(230, 57, 70, 0.15);
+      border: 1px solid rgba(230, 57, 70, 0.3);
+      color: var(--red);
+      padding: 4px 12px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+
+    .hdr-logout {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .hdr-logout:hover {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .main-layout {
+      display: flex;
+      flex: 1;
+    }
+
+    /* ── SIDEBAR ── */
+    aside {
+      width: 220px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      flex-shrink: 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: background 0.2s, color 0.2s;
+      border-left: 2px solid transparent;
+    }
+
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--body);
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(0, 255, 136, 0.06);
+    }
+
+    .nav-item .icon {
+      font-size: 16px;
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ── CONTENT ── */
+    .content {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    /* ── STATS ROW ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-lbl {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .card-body {
+      padding: 0;
+    }
+
+    /* ── TABLE ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    tbody td {
+      padding: 13px 16px;
+      color: var(--body);
+      vertical-align: middle;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-pending {
+      background: rgba(255, 185, 0, 0.15);
+      color: #FFB900;
+      border: 1px solid rgba(255, 185, 0, 0.3);
+    }
+
+    .badge-approved {
+      background: rgba(0, 255, 136, 0.12);
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    .badge-rejected {
+      background: rgba(230, 57, 70, 0.12);
+      color: var(--red);
+      border: 1px solid rgba(230, 57, 70, 0.3);
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover {
+      opacity: 0.8;
+    }
+
+    .btn-approve {
+      background: rgba(0, 255, 136, 0.15);
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    .btn-reject {
+      background: rgba(230, 57, 70, 0.13);
+      color: var(--red);
+      border: 1px solid rgba(230, 57, 70, 0.3);
+    }
+
+    .btn-ship {
+      background: rgba(123, 97, 255, 0.15);
+      color: #9B8EFF;
+      border: 1px solid rgba(123, 97, 255, 0.3);
+    }
+
+    .btn-view {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+
+    .btn-gap {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ── FORM ── */
+    .inline-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .inline-form textarea {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--body);
+      resize: none;
+      height: 80px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .inline-form textarea:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      padding: 48px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 999;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 14px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    #toast.ok {
+      border-color: var(--accent);
+    }
+
+    #toast.err {
+      border-color: var(--red);
+    }
+
+    /* ── MODAL ── */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.7);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-bg.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px;
+      width: 480px;
+      max-width: 95vw;
+    }
+
+    .modal h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .modal p {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .modal code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      justify-content: flex-end;
+    }
+
+    /* ── SECTION TITLE ── */
+    .section-hdr {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .section-hdr h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .section-hdr span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════════════════════════ -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">Phantom<span>IDS</span></div>
+      <div class="login-sub">// ADMIN CONTROL PANEL</div>
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="admin-user" placeholder="admin" value="admin">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="admin-pass" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-full" onclick="doLogin()">Access Admin Panel</button>
+      <div class="login-error" id="login-err"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════════════════════ -->
+  <div id="app">
+    <header>
+      <div class="hdr-logo">Phantom<span>IDS</span></div>
+      <div class="hdr-right">
+        <div class="hdr-badge">ADMIN</div>
+        <button class="hdr-logout" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- Sidebar -->
+      <aside>
+        <div class="nav-item active" onclick="showTab('pending')" id="tab-pending">
+          <span class="icon">🔔</span> Pending
+          <div class="nav-badge" id="pending-badge" style="display:none">0</div>
+        </div>
+        <div class="nav-item" onclick="showTab('orgs')" id="tab-orgs">
+          <span class="icon">🏢</span> Organizations
+        </div>
+        <div class="nav-item" onclick="showTab('hardware')" id="tab-hardware">
+          <span class="icon">📦</span> Hardware
+        </div>
+        <div class="nav-item" onclick="showTab('notes')" id="tab-notes">
+          <span class="icon">📝</span> Admin Notes
+        </div>
+      </aside>
+
+      <!-- Content -->
+      <div class="content">
+
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-num" id="s-pending">–</div>
+            <div class="stat-lbl">Pending Requests</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="s-approved">–</div>
+            <div class="stat-lbl">Approved Orgs</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="s-hardware">–</div>
+            <div class="stat-lbl">Hardware Dispatched</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="s-total">–</div>
+            <div class="stat-lbl">Total Registrations</div>
+          </div>
+        </div>
+
+        <!-- ── TAB: PENDING ── -->
+        <div id="view-pending">
+          <div class="section-hdr">
+            <h2>Pending Registrations</h2>
+            <span>// REVIEW QUEUE</span>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Organization</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Use Case</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pending-tbody">
+                  <tr>
+                    <td colspan="7" class="empty-state">
+                      <div class="spinner"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TAB: ORGS ── -->
+        <div id="view-orgs" style="display:none">
+          <div class="section-hdr">
+            <h2>All Organizations</h2>
+            <span>// FULL REGISTRY</span>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Organization</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Hardware</th>
+                    <th>Company Size</th>
+                    <th>Registered</th>
+                  </tr>
+                </thead>
+                <tbody id="orgs-tbody">
+                  <tr>
+                    <td colspan="6" class="empty-state">
+                      <div class="spinner"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TAB: HARDWARE ── -->
+        <div id="view-hardware" style="display:none">
+          <div class="section-hdr">
+            <h2>Hardware Dispatch</h2>
+            <span>// DEVICE MANAGEMENT</span>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Organization</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Hardware Dispatched</th>
+                    <th>Approved</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="hardware-tbody">
+                  <tr>
+                    <td colspan="6" class="empty-state">
+                      <div class="spinner"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TAB: NOTES ── -->
+        <div id="view-notes" style="display:none">
+          <div class="section-hdr">
+            <h2>Admin Notes</h2>
+            <span>// INTERNAL LOG</span>
+          </div>
+          <div id="notes-org-list"></div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /main-layout -->
+  </div><!-- /app -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+     APPROVE MODAL — shows generated credentials
+═══════════════════════════════════════════════════════════ -->
+  <div class="modal-bg" id="cred-modal">
+    <div class="modal">
+      <h3>✅ Organization Approved</h3>
+      <p>Credentials have been generated. Share these with the organization:</p>
+      <p style="margin-top:16px;color:var(--muted);font-size:13px">Dashboard Login URL:</p>
+      <code id="m-url">–</code>
+      <p style="color:var(--muted);font-size:13px">Email:</p>
+      <code id="m-email">–</code>
+      <p style="color:var(--muted);font-size:13px">Temporary Password:</p>
+      <code id="m-pass">–</code>
+      <p style="margin-top:16px; font-size:12px; color:var(--muted);">ℹ️ Copy and share this with the org. They must
+        change their password on first login.</p>
+      <div class="modal-actions">
+        <button class="btn btn-view" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script>
+    // ─── CONFIG ───────────────────────────────────────────────────────────
+    const SUPABASE_URL = 'https://udfwttjfyhszvxhpnwnp.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZnd0dGpmeWhzenZ4aHBud25wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTU2NzQsImV4cCI6MjA5MDA5MTY3NH0.T-B1yDvFr8TQKFF3QNnzhXFX-1OQ3ZJ1mwsoIll72Sg';
+
+    // ⚠️ Service Role Key is needed to create Auth users.
+    // Paste your service_role key from Supabase → Project Settings → API
+    // For security: in production this must run server-side only.
+    const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVkZnd0dGpmeWhzenZ4aHBud25wIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDUxNTY3NCwiZXhwIjoyMDkwMDkxNjc0fQ.0kkkv3o5UGJXrgyd3V1xNfadi5rt-ZIrocQzNzf2Hlc';
+
+    const ADMIN_USER = 'admin';
+    const ADMIN_PASS = 'PhantomIDS@admin123';
+
+    const ORG_DASHBOARD_URL = '../org-dashboard/index.html';
+
+    // Init Supabase client (anon key for reads, service key for auth ops)
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentTab = 'pending';
+    let orgsCache = [];
+
+    // ─── AUTH ────────────────────────────────────────────────────────────
+    function doLogin() {
+      const u = document.getElementById('admin-user').value.trim();
+      const p = document.getElementById('admin-pass').value.trim();
+      if (u === ADMIN_USER && p === ADMIN_PASS) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        loadAll();
+      } else {
+        document.getElementById('login-err').textContent = '✗ Invalid credentials';
+      }
+    }
+
+    function logout() {
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('admin-pass').value = '';
+    }
+
+    // ─── TAB NAVIGATION ─────────────────────────────────────────────────
+    function showTab(tab) {
+      currentTab = tab;
+      ['pending', 'orgs', 'hardware', 'notes'].forEach(t => {
+        document.getElementById(`view-${t}`).style.display = t === tab ? 'block' : 'none';
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      });
+      if (tab === 'pending') loadPending();
+      if (tab === 'orgs') loadOrgs();
+      if (tab === 'hardware') loadHardware();
+      if (tab === 'notes') loadNotes();
+    }
+
+    // ─── LOAD ALL (stats + pending) ──────────────────────────────────────
+    async function loadAll() {
+      const { data, error } = await db.from('organizations').select('id, status, hardware_dispatched');
+      if (error) { toast('Error loading stats: ' + error.message, 'err'); return; }
+      orgsCache = data || [];
+
+      const total = orgsCache.length;
+      const pending = orgsCache.filter(o => o.status === 'pending').length;
+      const approved = orgsCache.filter(o => o.status === 'approved').length;
+      const shipped = orgsCache.filter(o => o.hardware_dispatched).length;
+
+      document.getElementById('s-pending').textContent = pending;
+      document.getElementById('s-approved').textContent = approved;
+      document.getElementById('s-hardware').textContent = shipped;
+      document.getElementById('s-total').textContent = total;
+
+      if (pending > 0) {
+        const badge = document.getElementById('pending-badge');
+        badge.style.display = 'flex';
+        badge.textContent = pending;
+      }
+
+      loadPending();
+    }
+
+    // ─── PENDING TABLE ───────────────────────────────────────────────────
+    async function loadPending() {
+      const tbody = document.getElementById('pending-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="spinner"></div></td></tr>';
+
+      const { data, error } = await db
+        .from('organizations')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) { tbody.innerHTML = `<tr><td colspan="7" class="empty-state">Error: ${error.message}</td></tr>`; return; }
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-icon">✅</div>No pending requests</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(o => `
+    <tr>
+      <td><strong>${esc(o.org_name)}</strong><br><span class="mono" style="color:var(--muted);font-size:11px">${esc(o.company_size || '–')}</span></td>
+      <td>${esc(o.contact_name)}</td>
+      <td class="mono">${esc(o.work_email)}</td>
+      <td>${esc(o.role || '–')}</td>
+      <td>${esc(o.use_case || '–')}</td>
+      <td class="mono" style="color:var(--muted);font-size:11px">${fmtDate(o.created_at)}</td>
+      <td>
+        <div class="btn-gap">
+          <button class="btn btn-approve btn-sm" onclick="approveOrg('${o.id}','${esc(o.work_email)}','${esc(o.org_name)}')">Approve</button>
+          <button class="btn btn-reject  btn-sm" onclick="rejectOrg('${o.id}')">Reject</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+    }
+
+    // ─── ALL ORGS TABLE ──────────────────────────────────────────────────
+    async function loadOrgs() {
+      const tbody = document.getElementById('orgs-tbody');
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="spinner"></div></td></tr>';
+
+      const { data, error } = await db
+        .from('organizations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) { tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Error: ${error.message}</td></tr>`; return; }
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No organizations yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(o => `
+    <tr>
+      <td><strong>${esc(o.org_name)}</strong></td>
+      <td class="mono">${esc(o.work_email)}</td>
+      <td><span class="badge badge-${o.status}">${o.status.toUpperCase()}</span></td>
+      <td>${o.hardware_dispatched ? '<span class="badge badge-approved">SHIPPED</span>' : '<span class="badge badge-pending">PENDING</span>'}</td>
+      <td>${esc(o.company_size || '–')}</td>
+      <td class="mono" style="color:var(--muted);font-size:11px">${fmtDate(o.created_at)}</td>
+    </tr>
+  `).join('');
+    }
+
+    // ─── HARDWARE TABLE ──────────────────────────────────────────────────
+    async function loadHardware() {
+      const tbody = document.getElementById('hardware-tbody');
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="spinner"></div></td></tr>';
+
+      const { data, error } = await db
+        .from('organizations')
+        .select('*')
+        .eq('status', 'approved')
+        .order('approved_at', { ascending: false });
+
+      if (error) { tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Error: ${error.message}</td></tr>`; return; }
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No approved orgs yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(o => `
+    <tr>
+      <td><strong>${esc(o.org_name)}</strong></td>
+      <td class="mono">${esc(o.work_email)}</td>
+      <td><span class="badge badge-approved">APPROVED</span></td>
+      <td>${o.hardware_dispatched
+          ? '<span class="badge badge-approved">✓ DISPATCHED</span>'
+          : '<span class="badge badge-pending">NOT SENT</span>'}</td>
+      <td class="mono" style="color:var(--muted);font-size:11px">${fmtDate(o.approved_at)}</td>
+      <td>
+        ${!o.hardware_dispatched
+          ? `<button class="btn btn-ship btn-sm" onclick="markDispatched('${o.id}')">Mark Dispatched</button>`
+          : '<span style="color:var(--muted);font-size:12px">✓ Done</span>'}
+      </td>
+    </tr>
+  `).join('');
+    }
+
+    // ─── NOTES ───────────────────────────────────────────────────────────
+    async function loadNotes() {
+      const container = document.getElementById('notes-org-list');
+      container.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+      const { data: orgs, error } = await db
+        .from('organizations')
+        .select('id, org_name, work_email')
+        .eq('status', 'approved')
+        .order('org_name');
+
+      if (error || !orgs || orgs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No approved orgs to add notes for.</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      for (const org of orgs) {
+        const { data: notes } = await db
+          .from('admin_notes')
+          .select('*')
+          .eq('org_id', org.id)
+          .order('created_at', { ascending: false });
+
+        const noteList = (notes && notes.length > 0)
+          ? notes.map(n => `<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px">
+          <span style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${fmtDate(n.created_at)}</span>
+          <div style="margin-top:4px">${esc(n.note)}</div>
+        </div>`).join('')
+          : '<div class="empty-state" style="padding:20px">No notes yet.</div>';
+
+        container.innerHTML += `
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">${esc(org.org_name)}</div>
+            <div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px">${esc(org.work_email)}</div>
+          </div>
+        </div>
+        <div>${noteList}</div>
+        <div style="padding:16px">
+          <div class="inline-form">
+            <textarea id="note-${org.id}" placeholder="Add internal note..."></textarea>
+            <button class="btn btn-approve" onclick="addNote('${org.id}')">Add Note</button>
+          </div>
+        </div>
+      </div>`;
+      }
+    }
+
+    // ─── ACTIONS ─────────────────────────────────────────────────────────
+    async function approveOrg(orgId, email, orgName) {
+      const tempPass = genPassword();
+
+      // 1. Create Supabase Auth user via Admin API (needs service role key)
+      if (SUPABASE_SERVICE_KEY === 'YOUR_SERVICE_ROLE_KEY_HERE') {
+        toast('⚠️ Add your service_role key to the script to create Auth users.', 'err');
+        // Still approve the status row even without creating auth user
+      } else {
+        try {
+          const resp = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_SERVICE_KEY,
+              'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`
+            },
+            body: JSON.stringify({ email, password: tempPass, email_confirm: true })
+          });
+          const user = await resp.json();
+          if (user.id) {
+            // 2. Insert into org_credentials
+            const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
+            await db.from('org_credentials').insert({
+              org_id: orgId,
+              supabase_auth_user_id: user.id,
+              username: username
+            });
+          }
+        } catch (e) {
+          console.error('Auth user creation error:', e);
+        }
+      }
+
+      // 3. Update org status
+      const { error } = await db
+        .from('organizations')
+        .update({ status: 'approved', approved_at: new Date().toISOString() })
+        .eq('id', orgId);
+
+      if (error) { toast('Approval failed: ' + error.message, 'err'); return; }
+
+      // 4. Show credentials modal
+      document.getElementById('m-url').textContent = window.location.origin + '/org-dashboard/index.html';
+      document.getElementById('m-email').textContent = email;
+      document.getElementById('m-pass').textContent = tempPass;
+      document.getElementById('cred-modal').classList.add('open');
+
+      toast('✓ Organization approved!', 'ok');
+      loadAll();
+    }
+
+    async function rejectOrg(orgId) {
+      if (!confirm('Reject this registration request?')) return;
+      const { error } = await db
+        .from('organizations')
+        .update({ status: 'rejected' })
+        .eq('id', orgId);
+      if (error) { toast('Error: ' + error.message, 'err'); return; }
+      toast('Registration rejected.', 'ok');
+      loadAll();
+    }
+
+    async function markDispatched(orgId) {
+      const { error } = await db
+        .from('organizations')
+        .update({ hardware_dispatched: true })
+        .eq('id', orgId);
+      if (error) { toast('Error: ' + error.message, 'err'); return; }
+      toast('✓ Hardware marked as dispatched!', 'ok');
+      loadHardware();
+    }
+
+    async function addNote(orgId) {
+      const el = document.getElementById(`note-${orgId}`);
+      const note = el.value.trim();
+      if (!note) return;
+
+      const { error } = await db.from('admin_notes').insert({
+        org_id: orgId,
+        note: note,
+        created_by: 'admin'
+      });
+      if (error) { toast('Error saving note: ' + error.message, 'err'); return; }
+      el.value = '';
+      toast('Note saved.', 'ok');
+      loadNotes();
+    }
+
+    function closeModal() {
+      document.getElementById('cred-modal').classList.remove('open');
+    }
+
+    // ─── HELPERS ─────────────────────────────────────────────────────────
+    function genPassword() {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+      let p = '';
+      for (let i = 0; i < 12; i++) p += chars[(Math.random() * chars.length) | 0];
+      return p;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '–';
+      return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function toast(msg, type = 'ok') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'show ' + type;
+      setTimeout(() => el.className = '', 3500);
+    }
+  </script>
+</body>
+
+</html>
