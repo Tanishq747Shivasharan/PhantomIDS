@@ -695,7 +695,7 @@ footer {
 
 <!-- SECTION 04: HOW IT WORKS -->
 <section id="how-it-works">
-  <div class="section-tag">// 04 — HOW IT WORKS</div>
+  <div class="section-tag">04 — HOW IT WORKS</div>
   <h2 class="section-title aos">System Workflow</h2>
   <p class="section-sub aos">Each step happens independently of the host machine. Detection in under 200ms.</p>
   <div class="flow-steps">
@@ -704,7 +704,7 @@ footer {
       <div class="flow-content">
         <h3>Attacker Fires SQLi</h3>
         <p>Using tools like sqlmap, the attacker probes the target web application with malicious payloads containing SQL keywords, UNION statements, or quote characters.</p>
-        <div class="flow-latency">// Attack initiated from Kali Linux VM</div>
+        <div class="flow-latency">Attack initiated from Kali Linux VM</div>
       </div>
     </div>
     <div class="flow-step aos">
@@ -712,7 +712,7 @@ footer {
       <div class="flow-content">
         <h3>Network Packet Captured</h3>
         <p>The ESP32 sensor sniffs network traffic on the shared WiFi subnet (192.168.1.x) independently using packet inspection — completely invisible to the attacker.</p>
-        <div class="flow-latency">// ESP32 operates in promiscuous mode</div>
+        <div class="flow-latency">ESP32 operates in promiscuous mode</div>
       </div>
     </div>
     <div class="flow-step aos">
@@ -720,7 +720,7 @@ footer {
       <div class="flow-content">
         <h3>URL Decoded & Analyzed</h3>
         <p>HTTP request parameters are URL-decoded and passed through the two-signal confidence scoring engine. Checked against 20 SQL keyword signatures and special character patterns.</p>
-        <div class="flow-latency">// Signature engine: UNION, SELECT, DROP, OR 1=1, '--</div>
+        <div class="flow-latency">Signature engine: UNION, SELECT, DROP, OR 1=1, '--</div>
       </div>
     </div>
     <div class="flow-step aos">
@@ -728,7 +728,7 @@ footer {
       <div class="flow-content">
         <h3>Two-Signal Detection</h3>
         <p>Alert fires only when both a SQL keyword AND a quote/special character are present — reducing false positives. Single signals are logged but don't trigger alert.</p>
-        <div class="flow-latency">// Signal 1: Keyword match + Signal 2: Quote/Special char</div>
+        <div class="flow-latency">Signal 1: Keyword match + Signal 2: Quote/Special char</div>
       </div>
     </div>
     <div class="flow-step aos">
@@ -736,7 +736,7 @@ footer {
       <div class="flow-content">
         <h3>Alert on LCD + Buzzer + LED</h3>
         <p>Confirmed attack triggers the 16x2 I2C LCD display, active buzzer, and red LED indicator simultaneously. Physical alert cannot be silenced remotely.</p>
-        <div class="flow-latency">// Detection latency: under 200ms from packet to alert</div>
+        <div class="flow-latency">Detection latency: under 200ms from packet to alert</div>
       </div>
     </div>
     <div class="flow-step aos">
@@ -744,7 +744,7 @@ footer {
       <div class="flow-content">
         <h3>Log Sent to Dashboard</h3>
         <p>Attack event — IP, timestamp, payload, detection method — written to SQLite with WAL mode for high-load environments and forwarded to the centralized admin dashboard.</p>
-        <div class="flow-latency">// Tamper-proof hardware log — physical audit evidence</div>
+        <div class="flow-latency">Tamper-proof hardware log — physical audit evidence</div>
       </div>
     </div>
   </div>
@@ -753,7 +753,7 @@ footer {
 <!-- SECTION 05: LIVE DEMO -->
 <section id="demo" style="max-width:100%;padding:100px 48px;">
 <div style="max-width:1200px;margin:0 auto;">
-  <div class="section-tag">// 05 — LIVE DEMO</div>
+  <div class="section-tag">05 — LIVE DEMO</div>
   <h2 class="section-title aos">Real Attack. Real Detection.</h2>
   <p class="section-sub aos">Zero software agents on the protected host. This is a 60-second screen recording of an actual sqlmap attack being detected by the ESP32 sensor.</p>
   <div class="demo-split">
@@ -782,7 +782,7 @@ footer {
         <div class="esp32-label">16x2 I2C LCD | Active Buzzer | RED LED | ESP32 DevKit V1</div>
       </div>
       <div style="margin-top:16px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:20px;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); margin-bottom:12px;">// Attack Log</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); margin-bottom:12px;">Attack Log</div>
         <div id="attack-log" style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.8;"></div>
       </div>
     </div>
@@ -792,7 +792,7 @@ footer {
 
 <!-- SECTION 06: ARCHITECTURE -->
 <section id="architecture">
-  <div class="section-tag">// 06 — ARCHITECTURE</div>
+  <div class="section-tag">06 — ARCHITECTURE</div>
   <h2 class="section-title aos">Three-Actor System</h2>
   <p class="section-sub aos">A shared WiFi subnet (192.168.1.x). Three completely independent actors. One passive hardware observer that sees everything.</p>
   <div class="arch-diagram aos">
@@ -824,7 +824,7 @@ footer {
 
 <!-- SECTION 07: ML ANOMALY -->
 <section id="ml">
-  <div class="section-tag">// 07 — ML ANOMALY DETECTION</div>
+  <div class="section-tag">07 — ML ANOMALY DETECTION</div>
   <h2 class="section-title aos">Two-Layer Detection Engine</h2>
   <p class="section-sub aos">Don't hide the ML layer — it's the roadmap to v2.0 and signals enterprise readiness.</p>
   <div class="ml-layers aos">
@@ -862,7 +862,7 @@ footer {
 <!-- SECTION 08: USE CASES -->
 <section id="use-cases" style="max-width:100%; background:rgba(0,255,136,0.02); padding:100px 48px; border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
 <div style="max-width:1200px;margin:0 auto;">
-  <div class="section-tag">// 08 — USE CASES</div>
+  <div class="section-tag">08 — USE CASES</div>
   <h2 class="section-title aos">How IT Orgs Deploy PhantomIDS</h2>
   <p class="section-sub aos">Three deployment scenarios. One ₹800 hardware kit.</p>
   <div class="use-cases">
@@ -888,7 +888,7 @@ footer {
 <!-- SECTION 09: STATS -->
 <div style="background: var(--card-bg); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:48px;">
   <div style="max-width:1200px; margin:0 auto; text-align:center;">
-    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent); letter-spacing:3px; margin-bottom:24px;">// REAL TEST RESULTS — NOT MARKETING</div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--accent); letter-spacing:3px; margin-bottom:24px;">REAL TEST RESULTS — NOT MARKETING</div>
     <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:32px;">
       <div><div style="font-family:'Syne',sans-serif; font-size:36px; font-weight:800; color:var(--accent);">147</div><div style="font-size:13px; color:var(--muted); margin-top:4px;">Attacks detected per session</div></div>
       <div><div style="font-family:'Syne',sans-serif; font-size:36px; font-weight:800; color:var(--accent);">&lt;200ms</div><div style="font-size:13px; color:var(--muted); margin-top:4px;">Detection latency</div></div>
@@ -900,7 +900,7 @@ footer {
 
 <!-- SECTION 10: TEAM -->
 <section id="team">
-  <div class="section-tag">// 10 — ABOUT THE TEAM</div>
+  <div class="section-tag">10 — ABOUT THE TEAM</div>
   <h2 class="section-title aos">Built at S.E.S. Polytechnic</h2>
   <p class="section-sub aos">Diploma in Computer Technology, Sem 6 — NIS Coursework, taken beyond the classroom.</p>
   <div class="team-grid aos">
@@ -934,7 +934,7 @@ footer {
 <!-- SECTION 11: PRICING -->
 <section id="pricing" style="max-width:100%;background:rgba(0,0,0,0.3);padding:100px 48px;border-top:1px solid var(--border);">
 <div style="max-width:1200px;margin:0 auto;">
-  <div class="section-tag">// 11 — PRICING</div>
+  <div class="section-tag">11 — PRICING</div>
   <h2 class="section-title aos">Two Ways to Deploy</h2>
   <p class="section-sub aos">Open source forever. Pre-built for those who want to skip the setup.</p>
   <div class="pricing-grid aos">
@@ -975,7 +975,7 @@ footer {
 <section id="register-section" style="max-width:100%;padding:0;">
 <div style="background:linear-gradient(135deg,rgba(0,255,136,0.05),rgba(230,57,70,0.03)); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:100px 48px;">
   <div class="register-inner">
-    <div class="section-tag" style="text-align:center">// 12 — ORGANIZATION REGISTRATION</div>
+    <div class="section-tag" style="text-align:center">12 — ORGANIZATION REGISTRATION</div>
     <h2 class="section-title" style="text-align:center">Interested in deploying PhantomIDS in your organization?</h2>
     <p style="color:var(--muted); font-size:17px; line-height:1.6; text-align:center;">Register your interest — early access organizations get priority onboarding and dedicated support.</p>
     <div class="register-form">
