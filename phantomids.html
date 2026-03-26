@@ -98,14 +98,6 @@ nav {
   50% { opacity: 0.4; transform: scale(0.7); }
 }
 
-.hero-badge {
-  position: relative; z-index: 1;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; color: var(--accent);
-  letter-spacing: 3px; text-transform: uppercase;
-  margin-bottom: 20px; opacity: 0;
-  animation: fadeUp 0.6s ease 0.2s forwards;
-}
 .hero-title {
   position: relative; z-index: 1;
   font-family: 'Syne', sans-serif;
@@ -596,7 +588,6 @@ footer {
     <div class="pulse-dot"></div>
     <span id="stolen-counter">60,000,000+</span> records stolen by SQLi in 2023 alone
   </div>
-  <div class="hero-badge">// ESP32 Hardware IDS — Open Source</div>
   <h1 class="hero-title">
     Phantom<span class="red">IDS</span>
     <span class="dim">Hardware-Level SQL Injection Detection</span>
@@ -631,7 +622,6 @@ footer {
 
 <!-- SECTION 02: THREAT REALITY -->
 <section id="threats">
-  <div class="section-tag">// 02 — THREAT REALITY</div>
   <h2 class="section-title aos">SQLi Attack Stories</h2>
   <p class="section-sub aos">This is still happening. Every one of these attacks exploited the same vulnerability — unsanitized SQL input.</p>
   <div class="timeline-scroll aos">
@@ -679,7 +669,6 @@ footer {
 <!-- SECTION 03: PROBLEM STATEMENT -->
 <section id="problem" style="background: linear-gradient(180deg, transparent, rgba(230,57,70,0.02), transparent); max-width:100%; padding:100px 48px;">
 <div style="max-width:1200px; margin:0 auto;">
-  <div class="section-tag">// 03 — PROBLEM STATEMENT</div>
   <h2 class="section-title aos">Why Software IDS Fails</h2>
   <p class="section-sub aos">Software-based IDS runs on the same host it protects. If an attacker gains shell access — they kill it first.</p>
   <div class="compare-grid aos">
