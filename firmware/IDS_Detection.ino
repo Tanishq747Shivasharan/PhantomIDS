@@ -2,9 +2,9 @@
 #include <LiquidCrystal_I2C.h>
 
 // ─── CONFIGURATION ─────────────────────────────────────────────────────────
-const char* SSID          = "<WiFi Name>";
-const char* PASSWORD      = "<WiFi Password>";
-const char* HONEYPOT_IP   = "192.168.1.6";
+const char* SSID          = "Fibercity (Shivsharan)";
+const char* PASSWORD      = "2172316065";
+const char* HONEYPOT_IP   = "192.168.1.2";
 const int   HONEYPOT_PORT = 5000;
 const int   LISTEN_PORT   = 5000;
 
@@ -118,20 +118,18 @@ int detectSQLi(const String& body, String& decodedOut) {
   return (signal1 ? 1 : 0) + (signal2 ? 1 : 0);
 }
 
-// ─── POST ALERT TO FLASK ───────────────────────────────────────────────────
+// ─── POST ALERT TO NODE.JS SERVER ─────────────────────────────────────────
 /**
  * After detecting a confirmed SQLi (score >= 2), the ESP32 POSTs a JSON
- * alert to the Flask honeypot's /api/esp32/alert endpoint.
- * Flask then saves it locally and syncs it to Supabase.
+ * alert to the Node.js honeypot's /api/esp32/alert endpoint.
  */
-void postAlertToFlask(const String& attackerIP, const String& payload, int score) {
+void postAlertToServer(const String& attackerIP, const String& payload, int score) {
   WiFiClient client;
   if (!client.connect(HONEYPOT_IP, HONEYPOT_PORT)) {
-    Serial.println("[ALERT POST] Could not reach Flask — skipping cloud report");
+    Serial.println("[ALERT POST] Could not reach server — skipping cloud report");
     return;
   }
 
-  // Escape payload for JSON (replace " and \ only — good enough for alert data)
   String safePayload = payload;
   safePayload.replace("\\", "\\\\");
   safePayload.replace("\"", "\\\"");
@@ -155,12 +153,39 @@ void postAlertToFlask(const String& attackerIP, const String& payload, int score
     if (client.available()) {
       String line = client.readStringUntil('\n');
       if (line.startsWith("HTTP/1.1")) {
-        Serial.println("[ALERT POST] Flask response: " + line);
+        Serial.println("[ALERT POST] Server response: " + line);
         break;
       }
     }
   }
   client.stop();
+}
+
+// ─── HEARTBEAT PING TO SERVER ──────────────────────────────────────────────
+/**
+ * Sends a lightweight POST /api/esp32/ping every ~30 seconds so the
+ * dashboard can show the hardware sensor as ONLINE.
+ */
+unsigned long lastPingTime = 0;
+const unsigned long PING_INTERVAL = 30000; // 30 seconds
+
+void sendHeartbeat() {
+  if (millis() - lastPingTime < PING_INTERVAL) return;
+  lastPingTime = millis();
+
+  WiFiClient client;
+  if (!client.connect(HONEYPOT_IP, HONEYPOT_PORT)) return;
+
+  String httpReq =
+    "POST /api/esp32/ping HTTP/1.1\r\n"
+    "Host: " + String(HONEYPOT_IP) + "\r\n"
+    "Content-Length: 0\r\n"
+    "Connection: close\r\n\r\n";
+
+  client.print(httpReq);
+  delay(200);
+  client.stop();
+  Serial.println("[PING] Heartbeat sent to server ✓");
 }
 
 // ─── LCD + PHYSICAL ALERT ──────────────────────────────────────────────────
@@ -260,6 +285,10 @@ void setup() {
   server.begin();
   setIdle();
 
+  // Send immediate boot ping so dashboard shows ONLINE right away
+  sendHeartbeat();
+  lastPingTime = 0; // reset so next ping fires after PING_INTERVAL
+
   lcd.clear();
   lcd.setCursor(0, 0); lcd.print("PhantomIDS ARMED");
   lcd.setCursor(0, 1); lcd.print("192.168.1.30    ");
@@ -323,8 +352,8 @@ void loop() {
 
       showAlert(2, attackerIP, userPayload);
 
-      // ── NEW: Report to Flask → Supabase ───────────────────
-      postAlertToFlask(attackerIP, userPayload, score);
+      // ── NEW: Report to Node.js server ─────────────────────
+      postAlertToServer(attackerIP, userPayload, score);
 
     } else if (score == 1) {
       warnCount++;
@@ -345,7 +374,14 @@ void loop() {
   String hpResponse = "";
 
   if (hp.connect(HONEYPOT_IP, HONEYPOT_PORT)) {
-    hp.print(rawRequest);
+    // Inject real attacker IP so Node.js logs the correct source
+    String modifiedRequest = rawRequest;
+    int headerEnd = modifiedRequest.indexOf("\r\n\r\n");
+    if (headerEnd != -1) {
+      String xForwarded = "\r\nX-Forwarded-For: " + attackerIP;
+      modifiedRequest = modifiedRequest.substring(0, headerEnd) + xForwarded + modifiedRequest.substring(headerEnd);
+    }
+    hp.print(modifiedRequest);
     delay(400);
     unsigned long t1 = millis();
     while (hp.connected() && (millis() - t1 < 3000)) {
@@ -374,4 +410,7 @@ void loop() {
   }
 
   Serial.println("────────────────────────────────────────\n");
+
+  // Send heartbeat ping to keep dashboard sensor status ONLINE
+  sendHeartbeat();
 }
