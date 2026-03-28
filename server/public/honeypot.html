@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CorpNet — Employee Portal</title>
+  <meta name="description" content="CorpNet internal employee portal. Please log in with your corporate credentials." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Subtle corporate header */
+    .corp-header {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #1a3a6b;
+      color: white;
+      padding: 0.7rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.85rem;
+    }
+    .corp-header-logo { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; font-size: 1rem; }
+    .corp-header-logo .logo-icon { font-size: 1.5rem; }
+    .corp-header-right { display: flex; gap: 1.5rem; font-size: 0.8rem; opacity: 0.8; }
+
+    /* Banner */
+    .notice-banner {
+      background: #fff3cd; border: 1px solid #ffc107; color: #856404;
+      padding: 0.5rem 2rem; font-size: 0.8rem;
+      text-align: center; margin-top: 52px; width: 100%;
+      position: fixed; top: 52px; z-index: 99;
+    }
+
+    /* Main card */
+    .login-wrapper {
+      display: flex; gap: 3rem; align-items: stretch;
+      max-width: 900px; width: 100%; padding: 1rem;
+      margin-top: 5rem;
+    }
+    .login-side {
+      flex: 1; background: #1a3a6b; border-radius: 12px 0 0 12px;
+      padding: 3rem 2.5rem; color: white; display: flex;
+      flex-direction: column; justify-content: center;
+    }
+    .login-side h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 1rem; }
+    .login-side p { font-size: 0.9rem; opacity: 0.8; line-height: 1.7; margin-bottom: 2rem; }
+    .login-side .info-item {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.82rem; opacity: 0.75; margin-bottom: 0.5rem;
+    }
+
+    .login-card {
+      flex: 1; background: white; border-radius: 0 12px 12px 0;
+      padding: 3rem 2.5rem;
+      box-shadow: 0 4px 30px rgba(0,0,0,0.12);
+    }
+    .login-card h1 { font-size: 1.4rem; font-weight: 700; color: #1a3a6b; margin-bottom: 0.3rem; }
+    .login-card .sub { font-size: 0.85rem; color: #666; margin-bottom: 2rem; }
+
+    .form-group { margin-bottom: 1.3rem; }
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 0.4rem; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 0.75rem 1rem; border: 1px solid #d1d5db;
+      border-radius: 6px; font-size: 0.9rem; font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+    }
+    input:focus { border-color: #1a3a6b; box-shadow: 0 0 0 3px rgba(26,58,107,0.1); }
+
+    .remember-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.83rem; }
+    .remember-row label { display: flex; align-items: center; gap: 0.4rem; margin: 0; font-weight: 400; color: #374151; cursor: pointer; }
+    .remember-row a { color: #1a3a6b; text-decoration: none; }
+    .remember-row a:hover { text-decoration: underline; }
+
+    .btn-login {
+      width: 100%; padding: 0.85rem; background: #1a3a6b; color: white;
+      border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background 0.2s;
+    }
+    .btn-login:hover { background: #16305a; }
+
+    .divider { text-align: center; color: #9ca3af; font-size: 0.8rem; margin: 1.2rem 0; position: relative; }
+    .divider::before, .divider::after {
+      content: ''; position: absolute; top: 50%;
+      width: 42%; height: 1px; background: #e5e7eb;
+    }
+    .divider::before { left: 0; }
+    .divider::after { right: 0; }
+
+    .security-note {
+      background: #f0f7ff; border: 1px solid #bfdbfe; border-radius: 6px;
+      padding: 0.8rem 1rem; font-size: 0.78rem; color: #1e40af; margin-top: 1.2rem;
+      display: flex; gap: 0.5rem;
+    }
+
+    .result-box {
+      padding: 0.9rem 1rem; border-radius: 6px; font-size: 0.85rem;
+      margin-top: 1rem; display: none; font-family: monospace;
+    }
+    .result-box.success { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; }
+    .result-box.error   { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+    .result-box.debug   { background: #fefce8; border: 1px solid #fde68a; color: #92400e; word-break: break-all; }
+
+    .loading { display: none; text-align: center; padding: 0.5rem; color: #1a3a6b; font-size: 0.85rem; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    footer { text-align: center; margin-top: 2rem; font-size: 0.75rem; color: #9ca3af; }
+    footer a { color: #6b7280; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Corporate Header -->
+  <div class="corp-header">
+    <div class="corp-header-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+      CorpNet Solutions Inc.
+    </div>
+    <div class="corp-header-right">
+      <span>IT Support: ext. 4400</span>
+      <span>|</span>
+      <span>Security: security@corpnet.local</span>
+    </div>
+  </div>
+
+  <!-- Notice Banner -->
+  <div class="notice-banner">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>Scheduled maintenance window: Sun 02:00–04:00 UTC. Please save all work before then.
+  </div>
+
+  <div class="login-wrapper">
+    <!-- Left side info -->
+    <div class="login-side">
+      <h2>Employee Self-Service Portal</h2>
+      <p>Access HR documents, payslips, IT requests, and internal tools — all from one place.</p>
+      <div class="info-item"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> &nbsp;Payroll &amp; Benefits</div>
+      <div class="info-item"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> &nbsp;IT Service Desk</div>
+      <div class="info-item"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> &nbsp;Leave Management</div>
+      <div class="info-item"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> &nbsp;Internal Wiki &amp; Docs</div>
+      <div class="info-item"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> &nbsp;Directory &amp; Org Chart</div>
+      <br/>
+      <p style="font-size:0.75rem;opacity:0.5;">Powered by CorpNet Infrastructure v4.2 | Apache/2.4.41</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="login-card">
+      <h1>Sign In</h1>
+      <p class="sub">Use your corporate email credentials to access the portal.</p>
+
+      <form id="honeypot-form">
+        <div class="form-group">
+          <label for="username">Username / Employee ID</label>
+          <input type="text" id="username" name="username" placeholder="e.g. john.doe or EMP1024" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter your password" />
+        </div>
+        <div class="remember-row">
+          <label><input type="checkbox" /> Remember this device</label>
+          <a href="#">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn-login" id="login-btn">Sign In →</button>
+      </form>
+
+      <div class="loading" id="loading-msg"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:middle;animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Authenticating...</div>
+
+      <div class="result-box" id="result-box"></div>
+
+      <div class="divider">OR</div>
+
+      <div class="security-note">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        &nbsp;This is a secure, monitored system. Unauthorized access attempts are logged and reported to the IT Security team.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2024 CorpNet Solutions Inc. &nbsp;|&nbsp; <a href="#">Privacy Policy</a> &nbsp;|&nbsp; <a href="#">Acceptable Use Policy</a>
+  </footer>
+
+  <script>
+    const form = document.getElementById('honeypot-form');
+    const resultBox = document.getElementById('result-box');
+    const loadingMsg = document.getElementById('loading-msg');
+    const loginBtn = document.getElementById('login-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showResult('error', 'Please enter your username and password.');
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loadingMsg.style.display = 'block';
+      resultBox.style.display = 'none';
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        loadingMsg.style.display = 'none';
+        loginBtn.disabled = false;
+
+        if (data.success) {
+          showResult('success', `${data.message} Redirecting...`);
+          setTimeout(() => { window.location.href = '/employee-portal'; }, 1500);
+        } else if (data.debug) {
+          // Show "accidental" debug leak — bait for attacker
+          showResult('debug', `Server Error: ${data.message}\n\nDebug: ${data.debug}`);
+        } else {
+          showResult('error', `${data.message}`);
+        }
+      } catch (err) {
+        loadingMsg.style.display = 'none';
+        loginBtn.disabled = false;
+        showResult('error', 'Connection error. Please try again.');
+      }
+    });
+
+    function showResult(type, msg) {
+      resultBox.className = `result-box ${type}`;
+      resultBox.style.display = 'block';
+      resultBox.style.whiteSpace = 'pre-wrap';
+      resultBox.textContent = msg;
+    }
+  </script>
+</body>
+</html>
