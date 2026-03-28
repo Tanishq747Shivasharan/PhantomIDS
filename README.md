@@ -207,7 +207,7 @@ The firmware outputs detailed per-request diagnostics at 115200 baud, including 
 
 The following screenshot shows the PhantomIDS hardware setup and LCD output during an active sqlmap scan against the honeypot:
 
-![PhantomIDS Hardware Detection](SQLI_IDSDETECTION/Screenshot%202026-03-22%20112502.png)
+![PhantomIDS Hardware Detection](firmware/assets/screenshot.png)
 
 ---
 
