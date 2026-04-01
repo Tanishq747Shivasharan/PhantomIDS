@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "train": "node scripts/train-model.js",
     "simulate": "node scripts/attack-sim.js",
     "simulate:esp32": "node scripts/attack-sim.js --esp32",
     "test": "echo \"Error: no test specified\" && exit 1"

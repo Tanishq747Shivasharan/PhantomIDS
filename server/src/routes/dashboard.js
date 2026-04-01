@@ -63,14 +63,16 @@ router.get('/api/attacks', requireAuth, (req, res) => {
 // GET /api/top-ips — Top attacking IPs
 // ============================================================
 router.get('/api/top-ips', requireAuth, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 10, 200);
   try {
     const rows = db.prepare(`
-      SELECT ip, COUNT(*) as count, MAX(timestamp) as last_seen, status
-      FROM attack_log
+      SELECT ip, COUNT(*) as count, MAX(timestamp) as last_seen,
+        (SELECT status FROM ip_tracker WHERE ip = al.ip LIMIT 1) as status
+      FROM attack_log al
       GROUP BY ip
       ORDER BY count DESC
-      LIMIT 10
-    `).all();
+      LIMIT ?
+    `).all(limit);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

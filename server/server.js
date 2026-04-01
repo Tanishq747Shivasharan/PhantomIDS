@@ -14,6 +14,7 @@ const threatDetector = require('./src/middleware/threatDetector');
 const honeypotRoutes  = require('./src/routes/honeypot');
 const authRoutes      = require('./src/routes/auth');
 const dashboardRoutes = require('./src/routes/dashboard');
+const mlStatusRoutes  = require('./src/routes/mlStatus');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', honeypotRoutes);
 app.use('/', authRoutes);
 app.use('/', dashboardRoutes);
+app.use('/', mlStatusRoutes);  // ML model status & analysis API
 
 // ── SPA Fallback for HTML pages ───────────────────────────────
 app.get('/dashboard', (req, res) => {

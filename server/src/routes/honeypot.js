@@ -8,6 +8,10 @@ const db = require('../db/database');
 // WARNING: This is deliberately insecure by design.
 // ============================================================
 
+// BUG FIX: Declare lastEsp32Ping here at module scope so it is accessible
+// in the /api/esp32/alert route handler (line ~141) without hoisting issues.
+let lastEsp32Ping = null;
+
 function logAttack(req, payload) {
   // Prefer X-Forwarded-For set by ESP32 (real attacker IP)
   const ip = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress || 'unknown';
@@ -152,7 +156,7 @@ router.post('/api/esp32/alert', (req, res) => {
 // GET /api/esp32/status — Hardware sensor heartbeat
 // ESP32 can ping this, or dashboard polls it to show sensor state
 // ============================================================
-let lastEsp32Ping = null;
+// NOTE: lastEsp32Ping is declared at the top of this file (module scope)
 
 router.post('/api/esp32/ping', (req, res) => {
   lastEsp32Ping = Date.now();

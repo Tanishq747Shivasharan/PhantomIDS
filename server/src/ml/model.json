@@ -1,0 +1,34 @@
+{
+  "algorithm": "Logistic Regression (Binary Cross-Entropy, Gradient Descent)",
+  "version": "2.0.0",
+  "trainedAt": "2026-04-01T16:17:13.278Z",
+  "epochs": 3000,
+  "learningRate": 0.05,
+  "trainingSamples": 101,
+  "weights": [
+    4.948536,
+    3.853035
+  ],
+  "bias": -2.044437,
+  "norm": {
+    "requestRate": {
+      "min": 1,
+      "max": 80
+    },
+    "threatCount": {
+      "min": 0,
+      "max": 3
+    }
+  },
+  "metrics": {
+    "accuracy": 86.14,
+    "precision": 87.93,
+    "recall": 87.93,
+    "f1": 87.93
+  },
+  "classificationThreshold": 0.5,
+  "labels": {
+    "0": "NORMAL",
+    "1": "THREAT"
+  }
+}

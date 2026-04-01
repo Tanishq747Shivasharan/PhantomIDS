@@ -105,9 +105,16 @@ async function runSimulation() {
   console.log(`║  ESP32   : ${SIMULATE_ESP32 ? 'YES — hardware alerts simulated' : 'NO  — use --esp32 flag to enable'}`);
   console.log('╚══════════════════════════════════════════════════════╝\n');
 
-  // Check server is up
+  // Check server is up (GET /honeypot-status — not a POST endpoint)
   try {
-    await post('/honeypot-status', {});
+    await new Promise((resolve, reject) => {
+      const req = require('http').request({
+        hostname: TARGET_HOST, port: TARGET_PORT,
+        path: '/honeypot-status', method: 'GET',
+      }, resolve);
+      req.on('error', reject);
+      req.end();
+    });
   } catch {
     console.error(`❌  Cannot reach ${TARGET_HOST}:${TARGET_PORT} — is the server running?\n`);
     process.exit(1);
