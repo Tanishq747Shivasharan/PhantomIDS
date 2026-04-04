@@ -75,25 +75,10 @@ nav {
   background: radial-gradient(ellipse 80% 60% at 50% 30%, rgba(0,255,136,0.06) 0%, transparent 70%),
               radial-gradient(ellipse 50% 40% at 80% 80%, rgba(230,57,70,0.05) 0%, transparent 60%);
 }
-/* Particle canvas */
 #particle-canvas { position: absolute; inset: 0; z-index: 0; }
 
-.live-counter {
-  position: relative; z-index: 1;
-  background: rgba(230,57,70,0.12);
-  border: 1px solid rgba(230,57,70,0.4);
-  border-radius: 100px;
-  padding: 6px 20px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px; color: var(--red);
-  margin-bottom: 32px;
-  display: inline-flex; align-items: center; gap: 8px;
-}
-.pulse-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--red);
-  animation: pulse 1.5s infinite;
-}
+
+
 @keyframes pulse {
   0%,100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.7); }
@@ -203,65 +188,96 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
 #threats {
   background: linear-gradient(180deg, transparent, rgba(230,57,70,0.03), transparent);
   max-width: 100% !important;
-  padding-top: 0; padding-bottom: 0;
+  padding: 100px 48px;
 }
+
+/*
+  FIX: The wrapper must have position:relative so that when the inner
+  element exits the pin zone and becomes position:absolute, it anchors
+  correctly to the wrapper (not the document).
+*/
 .threats-pin-wrapper {
   position: relative;
 }
+
+/*
+  FIX: .threats-inner has NO pinned CSS class styles anymore.
+  All positioning is applied via inline style by JS.
+  This avoids CSS-vs-JS conflicts.
+*/
 .threats-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Slider viewport — clips cards, no scroll */
+.timeline-viewport {
+  overflow: hidden;
   position: relative;
 }
-.threats-inner.pinned {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  background: var(--bg);
-  padding: 100px 48px;
-  max-width: 100%;
-  height: 100vh;
+/* The track slides via transform */
+.timeline-track {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  gap: 20px;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
-.threats-inner.past {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 100px 48px;
-}
-.timeline-scroll {
-  display: flex; gap: 20px; overflow-x: hidden;
-  padding-bottom: 16px;
-  scrollbar-width: none;
-  position: relative;
-}
-.timeline-scroll::-webkit-scrollbar { display: none; }
-.timeline-scroll-hint {
-  position: absolute;
-  bottom: 24px;
-  right: 0;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
-  color: var(--muted);
+
+/* Nav controls row */
+.slider-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
-  pointer-events: none;
-  transition: opacity 0.5s ease;
-  opacity: 1;
-  background: linear-gradient(90deg, transparent, rgba(10,14,26,0.9));
-  padding: 6px 12px 6px 32px;
-  border-radius: 4px;
+  justify-content: space-between;
+  margin-bottom: 28px;
 }
-.timeline-scroll-hint.hidden { opacity: 0; }
+.slider-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.slider-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: none; cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  padding: 0;
+}
+.slider-dot.active {
+  background: var(--accent);
+  transform: scale(1.3);
+}
+.slider-btns {
+  display: flex;
+  gap: 10px;
+}
+.slider-btn {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,255,136,0.3);
+  background: rgba(0,255,136,0.06);
+  color: var(--accent);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.slider-btn:hover {
+  background: rgba(0,255,136,0.15);
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+.slider-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  transform: none;
+}
+
+/* Progress bar */
 .timeline-progress {
   height: 3px;
   background: rgba(230,57,70,0.15);
   border-radius: 2px;
-  margin-top: 16px;
+  margin-top: 20px;
   overflow: hidden;
 }
 .timeline-progress-bar {
@@ -269,7 +285,7 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
   width: 0%;
   background: linear-gradient(90deg, var(--red), var(--accent));
   border-radius: 2px;
-  transition: width 0.15s ease-out;
+  transition: width 0.4s ease;
 }
 .threat-card {
   min-width: 280px; flex-shrink: 0;
@@ -476,108 +492,7 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
 .use-case h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 10px; }
 .use-case p { font-size: 14px; color: var(--muted); line-height: 1.6; }
 
-/* ──────────────────── PRICING ──────────────────── */
-.pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.pricing-card {
-  background: var(--card-bg); border-radius: 16px; padding: 40px;
-  border: 1px solid var(--border);
-}
-.pricing-card.featured {
-  border-color: var(--accent);
-  background: rgba(0,255,136,0.04);
-}
-.pricing-tier {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px; letter-spacing: 2px; color: var(--muted);
-  text-transform: uppercase; margin-bottom: 8px;
-}
-.pricing-price {
-  font-family: 'Syne', sans-serif;
-  font-size: 48px; font-weight: 800;
-  color: var(--body); margin-bottom: 4px;
-}
-.pricing-price span { font-size: 20px; color: var(--muted); }
-.pricing-target { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
-.pricing-items { list-style: none; }
-.pricing-items li {
-  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
-  font-size: 15px; display: flex; gap: 10px; align-items: center;
-}
-.pricing-items li:last-child { border-bottom: none; }
-.pricing-items li::before { content: ''; display: none; }
-.pricing-items li .check-icon { flex-shrink: 0; width: 16px; height: 16px; color: var(--accent); }
-.pricing-cta {
-  margin-top: 28px; width: 100%; padding: 14px;
-  border-radius: 8px; font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700; font-size: 15px; cursor: pointer; border: none;
-  transition: opacity 0.2s;
-}
-.pricing-cta.ghost {
-  background: transparent; color: var(--body);
-  border: 1px solid rgba(255,255,255,0.2);
-}
-.pricing-cta.solid { background: var(--accent); color: #000; }
-.pricing-cta:hover { opacity: 0.8; }
 
-/* ──────────────────── TEAM ──────────────────── */
-.team-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-.team-card {
-  background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: 12px; padding: 28px; text-align: center;
-}
-.team-avatar {
-  width: 64px; height: 64px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), rgba(0,255,136,0.2));
-  margin: 0 auto 16px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
-  color: #000;
-}
-.team-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 4px; }
-.team-role { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 8px; }
-.team-bio { font-size: 13px; color: var(--muted); line-height: 1.5; }
-
-/* ──────────────────── REGISTRATION CTA ──────────────────── */
-#register {
-  background: linear-gradient(135deg, rgba(0,255,136,0.05), rgba(230,57,70,0.03));
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 100px 48px;
-}
-.register-inner { max-width: 720px; margin: 0 auto; text-align: center; }
-.register-form {
-  background: var(--card-bg); border: 1px solid var(--border);
-  border-radius: 16px; padding: 48px;
-  text-align: left; margin-top: 48px;
-}
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 0; }
-.form-group.full { grid-column: 1 / -1; }
-.form-label { font-size: 13px; color: var(--muted); font-weight: 500; }
-.form-input, .form-select {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px; padding: 12px 16px;
-  color: var(--body); font-family: 'Space Grotesk', sans-serif;
-  font-size: 15px; outline: none;
-  transition: border-color 0.2s;
-}
-.form-input:focus, .form-select:focus { border-color: var(--accent); }
-.form-select option { background: var(--bg); }
-.form-submit {
-  margin-top: 24px; width: 100%; padding: 16px;
-  background: var(--accent); color: #000;
-  border: none; border-radius: 8px;
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700; font-size: 16px;
-  cursor: pointer; transition: opacity 0.2s;
-}
-.form-submit:hover { opacity: 0.85; }
-.social-proof {
-  margin-top: 20px; text-align: center;
-  font-size: 13px; color: var(--muted);
-  font-family: 'JetBrains Mono', monospace;
-}
 
 /* ──────────────────── FOOTER ──────────────────── */
 footer {
@@ -641,8 +556,6 @@ footer {
     <a href="#threats">Threat Reality</a>
     <a href="#how-it-works">How It Works</a>
     <a href="#demo">Live Demo</a>
-    <a href="#pricing">Pricing</a>
-    <a href="#register">Register</a>
   </div>
   <a href="/login" class="nav-cta" style="text-decoration:none">Client Login →</a>
 </nav>
@@ -652,8 +565,6 @@ footer {
   <canvas id="particle-canvas"></canvas>
   <div class="hero-bg"></div>
   <div class="live-counter">
-    <div class="pulse-dot"></div>
-    <span id="stolen-counter">60,000,000+</span> records stolen by SQLi in 2023 alone
   </div>
   <h1 class="hero-title">
     Phantom<span class="red">IDS</span>
@@ -689,58 +600,72 @@ footer {
 
 <!-- SECTION 02: THREAT REALITY -->
 <section id="threats">
-  <div class="threats-pin-wrapper" id="threats-pin-wrapper">
-    <div class="threats-inner" id="threats-inner">
-      <div style="max-width:1200px;margin:0 auto;">
-        <h2 class="section-title aos">SQLi Attack Stories</h2>
-        <p class="section-sub aos">This is still happening. Every one of these attacks exploited the same vulnerability — unsanitized SQL input.</p>
-        <div style="position:relative">
-          <div class="timeline-scroll aos" id="threat-timeline-scroll">
-            <div class="threat-card">
-              <div class="threat-year">2023 — MOVEit</div>
-              <div class="threat-name">MOVEit Transfer</div>
-              <div class="threat-stat">95M+</div>
-              <div class="threat-desc">Users affected. SQL injection in the file transfer platform led to one of the largest data breaches of the decade.</div>
-              <div class="threat-method">METHOD: SQLi via HTTP POST parameters</div>
-            </div>
-            <div class="threat-card">
-              <div class="threat-year">2021 — Accellion</div>
-              <div class="threat-name">Accellion FTA</div>
-              <div class="threat-stat">$200M+</div>
-              <div class="threat-desc">Cost in damages. Zero-day SQL injection exploited before patches could be deployed across enterprise clients.</div>
-              <div class="threat-method">METHOD: Blind SQLi, time-based extraction</div>
-            </div>
-            <div class="threat-card">
-              <div class="threat-year">2017 — Equifax</div>
-              <div class="threat-name">Equifax Breach</div>
-              <div class="threat-stat">147M</div>
-              <div class="threat-desc">People's financial records exposed. SQL injection combined with unpatched Apache Struts led to catastrophic failure.</div>
-              <div class="threat-method">METHOD: UNION-based SQLi injection</div>
-            </div>
-            <div class="threat-card">
-              <div class="threat-year">2011 — Mass Campaign</div>
-              <div class="threat-name">LulzSec / Anonymous</div>
-              <div class="threat-stat">1000+</div>
-              <div class="threat-desc">Databases compromised in coordinated SQLi campaigns against government and corporate targets globally.</div>
-              <div class="threat-method">METHOD: Automated sqlmap campaigns</div>
-            </div>
-            <div class="threat-card">
-              <div class="threat-year">ONGOING</div>
-              <div class="threat-name">SME Targets</div>
-              <div class="threat-stat">₹5L+</div>
-              <div class="threat-desc">Average cost per incident for Indian SMEs unable to afford enterprise WAF solutions. PhantomIDS costs ₹800 in hardware.</div>
-              <div class="threat-method">METHOD: Automated scanning tools</div>
-            </div>
-          </div>
-          <div class="timeline-progress">
-            <div class="timeline-progress-bar" id="timeline-progress-bar"></div>
-          </div>
-          <div class="timeline-scroll-hint" id="timeline-hint">scroll to explore <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+  <div class="threats-inner">
+    <div class="section-tag">02 — THREAT REALITY</div>
+    <h2 class="section-title aos">SQLi Attack Stories</h2>
+    <p class="section-sub aos">This is still happening. Every one of these attacks exploited the same vulnerability — unsanitized SQL input.</p>
+
+    <!-- Slider controls: dots left, prev/next right -->
+    <div class="slider-controls">
+      <div class="slider-dots" id="slider-dots"></div>
+      <div class="slider-btns">
+        <button class="slider-btn" id="slider-prev" aria-label="Previous" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button class="slider-btn" id="slider-next" aria-label="Next">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Viewport clips the track -->
+    <div class="timeline-viewport">
+      <div class="timeline-track" id="timeline-track">
+        <div class="threat-card">
+          <div class="threat-year">2023 — MOVEit</div>
+          <div class="threat-name">MOVEit Transfer</div>
+          <div class="threat-stat">95M+</div>
+          <div class="threat-desc">Users affected. SQL injection in the file transfer platform led to one of the largest data breaches of the decade.</div>
+          <div class="threat-method">METHOD: SQLi via HTTP POST parameters</div>
         </div>
-        <div class="threat-conclusion aos">
-          Every one of these attacks exploited the same vulnerability — unsanitized SQL input. <strong>PhantomIDS detects it at the hardware level before the damage is done.</strong>
+        <div class="threat-card">
+          <div class="threat-year">2021 — Accellion</div>
+          <div class="threat-name">Accellion FTA</div>
+          <div class="threat-stat">$200M+</div>
+          <div class="threat-desc">Cost in damages. Zero-day SQL injection exploited before patches could be deployed across enterprise clients.</div>
+          <div class="threat-method">METHOD: Blind SQLi, time-based extraction</div>
+        </div>
+        <div class="threat-card">
+          <div class="threat-year">2017 — Equifax</div>
+          <div class="threat-name">Equifax Breach</div>
+          <div class="threat-stat">147M</div>
+          <div class="threat-desc">People's financial records exposed. SQL injection combined with unpatched Apache Struts led to catastrophic failure.</div>
+          <div class="threat-method">METHOD: UNION-based SQLi injection</div>
+        </div>
+        <div class="threat-card">
+          <div class="threat-year">2011 — Mass Campaign</div>
+          <div class="threat-name">LulzSec / Anonymous</div>
+          <div class="threat-stat">1000+</div>
+          <div class="threat-desc">Databases compromised in coordinated SQLi campaigns against government and corporate targets globally.</div>
+          <div class="threat-method">METHOD: Automated sqlmap campaigns</div>
+        </div>
+        <div class="threat-card">
+          <div class="threat-year">ONGOING</div>
+          <div class="threat-name">SME Targets</div>
+          <div class="threat-stat">₹5L+</div>
+          <div class="threat-desc">Average cost per incident for Indian SMEs unable to afford enterprise WAF solutions. PhantomIDS costs ₹800 in hardware.</div>
+          <div class="threat-method">METHOD: Automated scanning tools</div>
         </div>
       </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="timeline-progress">
+      <div class="timeline-progress-bar" id="timeline-progress-bar"></div>
+    </div>
+
+    <div class="threat-conclusion aos" style="margin-top:40px;">
+      Every one of these attacks exploited the same vulnerability — unsanitized SQL input. <strong>PhantomIDS detects it at the hardware level before the damage is done.</strong>
     </div>
   </div>
 </section>
@@ -975,139 +900,6 @@ footer {
   </div>
 </div>
 
-<!-- SECTION 10: TEAM -->
-<section id="team">
-  <div class="section-tag">10 — ABOUT THE TEAM</div>
-  <h2 class="section-title aos">Built at S.E.S. Polytechnic</h2>
-  <p class="section-sub aos">Diploma in Computer Technology, Sem 6 — NIS Coursework, taken beyond the classroom.</p>
-  <div class="team-grid aos">
-    <div class="team-card">
-      <div class="team-avatar">H</div>
-      <div class="team-name">Hardware Lead</div>
-      <div class="team-role">ESP32 + Circuit Design</div>
-      <div class="team-bio">ESP32 firmware, I2C LCD integration, buzzer circuit, network packet sniffing in Arduino C++.</div>
-    </div>
-    <div class="team-card">
-      <div class="team-avatar">S</div>
-      <div class="team-name">Software Lead</div>
-      <div class="team-role">Backend + Honeypot</div>
-      <div class="team-bio">Python Flask honeypot, SQLite3 with WAL mode, attack logging pipeline and dashboard API.</div>
-    </div>
-    <div class="team-card">
-      <div class="team-avatar">R</div>
-      <div class="team-name">Security Research</div>
-      <div class="team-role">Attack Simulation</div>
-      <div class="team-bio">sqlmap 1.9.11 attack patterns, Burp Suite testing, signature engine design, false positive reduction.</div>
-    </div>
-    <div class="team-card">
-      <div class="team-avatar">M</div>
-      <div class="team-name">ML Engineer</div>
-      <div class="team-role">Anomaly Detection</div>
-      <div class="team-bio">Designing the v2.0 ML layer — 7-feature behavioral analysis model for automated tool fingerprinting.</div>
-    </div>
-  </div>
-</section>
-
-<!-- SECTION 11: PRICING -->
-<section id="pricing" style="max-width:100%;background:rgba(0,0,0,0.3);padding:100px 48px;border-top:1px solid var(--border);">
-<div style="max-width:1200px;margin:0 auto;">
-  <div class="section-tag">11 — PRICING</div>
-  <h2 class="section-title aos">Two Ways to Deploy</h2>
-  <p class="section-sub aos">Open source forever. Pre-built for those who want to skip the setup.</p>
-  <div class="pricing-grid aos">
-    <div class="pricing-card">
-      <div class="pricing-tier">Open Source</div>
-      <div class="pricing-price">Free <span>/ forever</span></div>
-      <div class="pricing-target">For developers, students, security researchers</div>
-      <ul class="pricing-items">
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Full source code on GitHub</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Build it yourself</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Community support via GitHub Issues</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>MIT License</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Architecture docs + build guide</li>
-      </ul>
-      <button class="pricing-cta ghost">View on GitHub</button>
-    </div>
-    <div class="pricing-card featured">
-      <div class="pricing-tier">Pre-Built Kit</div>
-      <div class="pricing-price">₹1,499 <span>/ kit</span></div>
-      <div class="pricing-target">For institutes, small IT teams, compliance use</div>
-      <ul class="pricing-items">
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Assembled ESP32 device</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Pre-flashed firmware</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Setup guide booklet</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>1 month email support</li>
-        <li><svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Priority v2.0 access</li>
-      </ul>
-      <button class="pricing-cta solid" onclick="document.getElementById('register-section').scrollIntoView({behavior:'smooth'})">Request Early Access</button>
-    </div>
-  </div>
-  <div style="margin-top:24px; padding:20px 28px; border-left:3px solid var(--accent); background:rgba(0,255,136,0.04); border-radius:0 8px 8px 0; font-size:15px; color:var(--muted); line-height:1.7;">
-    Pre-Built Kits ship with pre-flashed firmware, assembled hardware, a setup guide booklet, and one month of dedicated onboarding support. <em style="color:var(--body)">No soldering required.</em>
-  </div>
-</div>
-</section>
-
-<!-- SECTION 12: REGISTER -->
-<section id="register-section" style="max-width:100%;padding:0;">
-<div style="background:linear-gradient(135deg,rgba(0,255,136,0.05),rgba(230,57,70,0.03)); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:100px 48px;">
-  <div class="register-inner">
-    <div class="section-tag" style="text-align:center">12 — ORGANIZATION REGISTRATION</div>
-    <h2 class="section-title" style="text-align:center">Interested in deploying PhantomIDS in your organization?</h2>
-    <p style="color:var(--muted); font-size:17px; line-height:1.6; text-align:center;">Register your interest — early access organizations get priority onboarding and dedicated support.</p>
-    <div class="register-form">
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="reg-org-name">Organization Name</label>
-          <input class="form-input" id="reg-org-name" type="text" placeholder="Acme IT Solutions">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reg-contact">Contact Name</label>
-          <input class="form-input" id="reg-contact" type="text" placeholder="Your full name">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reg-email">Work Email</label>
-          <input class="form-input" id="reg-email" type="email" placeholder="you@company.com">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reg-role">Your Role</label>
-          <select class="form-select" id="reg-role">
-            <option>IT Manager</option>
-            <option>CTO</option>
-            <option>Security Engineer</option>
-            <option>Educator / Institute</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reg-size">Company Size</label>
-          <select class="form-select" id="reg-size">
-            <option>1–10 employees</option>
-            <option>11–50 employees</option>
-            <option>51–200 employees</option>
-            <option>201–1000 employees</option>
-            <option>1000+ employees</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="reg-usecase">Use Case</label>
-          <select class="form-select" id="reg-usecase">
-            <option>Internal network monitoring</option>
-            <option>Cybersecurity training lab</option>
-            <option>Compliance / DPDP Act audit evidence</option>
-            <option>Honeypot deployment</option>
-            <option>Research / Academic</option>
-          </select>
-        </div>
-      </div>
-      <button class="form-submit" id="reg-submit-btn" onclick="handleRegister(this)">Register Interest — Early Access</button>
-      <div class="social-proof" id="social-proof-text">Join organizations already on the waitlist</div>
-      <div id="reg-error" style="margin-top:12px;color:#E63946;font-size:13px;font-family:'JetBrains Mono',monospace;text-align:center;"></div>
-    </div>
-  </div>
-</div>
-</section>
-
 <!-- FOOTER -->
 <footer>
   <div class="footer-logo">Phantom<span>IDS</span></div>
@@ -1159,7 +951,6 @@ function drawParticles() {
     ctx.fillStyle = `rgba(0,255,136,${p.alpha})`;
     ctx.fill();
   }
-  // Draw connections
   for(let i=0; i<particles.length; i++) {
     for(let j=i+1; j<particles.length; j++) {
       const dx = particles[i].x - particles[j].x;
@@ -1260,13 +1051,13 @@ function triggerESP32Alert() {
   lcd1.textContent = '! SQLI DETECTED !';
   lcd1.classList.add('alert');
   lcd2.textContent = 'IP:192.168.1.77';
-  
+
   const entry = document.createElement('div');
   entry.style.cssText = 'color:#E63946; margin-bottom:4px;';
   const now = new Date();
   entry.textContent = `[${now.toLocaleTimeString()}] ALERT #${alertCount} — UNION SQLi from 192.168.1.77`;
   attackLog.appendChild(entry);
-  
+
   setTimeout(() => {
     lcd1.textContent = 'PhantomIDS v1.0';
     lcd1.classList.remove('alert');
@@ -1284,7 +1075,6 @@ function resetDemo() {
   setTimeout(typeCmd, 2000);
 }
 
-// Start terminal when in view
 const termObs = new IntersectionObserver(entries => {
   if(entries[0].isIntersecting) {
     setTimeout(typeCmd, 800);
@@ -1347,191 +1137,100 @@ async function handleRegister(btn) {
   document.getElementById('social-proof-text').textContent = 'Your request has been received. We\'ll review and respond within 48 hours.';
 }
 
-// ──────────── SCROLL-PIN — THREAT TIMELINE ────────────
-(function() {
-  const wrapper = document.getElementById('threats-pin-wrapper');
-  const inner = document.getElementById('threats-inner');
-  const scroller = document.getElementById('threat-timeline-scroll');
-  const hint = document.getElementById('timeline-hint');
-  const progressBar = document.getElementById('timeline-progress-bar');
-  if (!wrapper || !inner || !scroller) return;
+// ──────────── CARD SLIDER — THREAT TIMELINE ────────────
+(function () {
+  const track    = document.getElementById('timeline-track');
+  const dotsWrap = document.getElementById('slider-dots');
+  const btnPrev  = document.getElementById('slider-prev');
+  const btnNext  = document.getElementById('slider-next');
+  const bar      = document.getElementById('timeline-progress-bar');
 
-  /* How far the timeline can scroll horizontally */
-  function getScrollableWidth() {
-    return Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+  if (!track) return;
+
+  const cards     = Array.from(track.querySelectorAll('.threat-card'));
+  const total     = cards.length;
+  const GAP       = 20; // matches CSS gap
+  let current     = 0;
+
+  // ── build dot indicators ──
+  cards.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'slider-dot' + (i === 0 ? ' active' : '');
+    dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    dot.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(dot);
+  });
+
+  // ── card width = viewport width (full-width one card at a time) ──
+  function cardWidth() {
+    // Each card fills the viewport minus gaps on either side
+    return track.parentElement.offsetWidth;
   }
 
-  /* Set the wrapper tall enough so the page "knows" there's a
-     pinned section occupying extra vertical room.  This keeps
-     sections below in the right position after un-pin.           */
-  function setupPinHeight() {
-    const sw = getScrollableWidth();
-    const ih = inner.getBoundingClientRect().height || inner.offsetHeight;
-    wrapper.style.height = (ih + sw) + 'px';
-  }
-  setupPinHeight();
-  window.addEventListener('resize', setupPinHeight);
-
-  /* ── Smooth scroll accumulator ──────────────────────────
-     We accumulate raw wheel deltaY and lerp with rAF so the
-     horizontal glide feels buttery.                              */
-  let targetScrollLeft = 0;   // where we want to be
-  let currentScrollLeft = 0;  // where we are (animated)
-  let pinned = false;
-  let rafId = null;
-  const LERP = 0.12;         // smoothing factor
-
-  function animate() {
-    const diff = targetScrollLeft - currentScrollLeft;
-    if (Math.abs(diff) < 0.5) {
-      currentScrollLeft = targetScrollLeft;
-    } else {
-      currentScrollLeft += diff * LERP;
-    }
-    scroller.scrollLeft = currentScrollLeft;
-
-    // Progress bar
-    const sw = getScrollableWidth();
-    const pct = sw > 0 ? currentScrollLeft / sw : 0;
-    if (progressBar) progressBar.style.width = (pct * 100).toFixed(2) + '%';
-    if (hint) {
-      if (pct > 0.03) hint.classList.add('hidden');
-      else hint.classList.remove('hidden');
-    }
-
-    if (Math.abs(diff) > 0.5) {
-      rafId = requestAnimationFrame(animate);
-    } else {
-      rafId = null;
-    }
-  }
-
-  function startAnim() {
-    if (!rafId) rafId = requestAnimationFrame(animate);
-  }
-
-  /* ── Wheel event interceptor ─────────────────────────── */
-  window.addEventListener('wheel', function(e) {
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const sw = getScrollableWidth();
-    if (sw <= 0) return;  // nothing to scroll
-
-    const scrolledPast = -wrapperRect.top;
-    const scrollingDown = e.deltaY > 0;
-    const scrollingUp   = e.deltaY < 0;
-
-    // Phase 1: section hasn't entered viewport yet → allow normal scroll
-    if (wrapperRect.top > 0) {
-      unpin();
-      return;
-    }
-
-    // Phase 3: we've scrolled past the pinned distance → allow normal scroll
-    if (scrolledPast > sw + 5) {
-      unpin();
-      return;
-    }
-
-    // Phase 2: inside the pinned zone — decide whether to capture
-    const nearStart = targetScrollLeft <= 2;
-    const nearEnd   = targetScrollLeft >= sw - 2;
-
-    // At start and scrolling up → release upward
-    if (nearStart && scrollingUp) {
-      unpin();
-      return;
-    }
-
-    // At end and scrolling down → release downward
-    if (nearEnd && scrollingDown) {
-      // Snap the target so next passive scroll sees it as "past"
-      targetScrollLeft = sw;
-      currentScrollLeft = sw;
-      scroller.scrollLeft = sw;
-      unpin();
-      return;
-    }
-
-    // ── Lock the page and translate vertical wheel to horizontal ──
-    e.preventDefault();
-    pin();
-
-    // Accumulate into target (scale delta for faster, comfortable speed)
-    const delta = e.deltaY * 2.0;
-    targetScrollLeft = Math.max(0, Math.min(sw, targetScrollLeft + delta));
-    startAnim();
-  }, { passive: false });
-
-  /* ── Pin / Unpin helpers ──────────────────────────────── */
-  function pin() {
-    if (pinned) return;
-    pinned = true;
-    inner.classList.add('pinned');
-    inner.classList.remove('past');
-    inner.style.position = 'fixed';
-    inner.style.top = '0';
-  }
-
-  function unpin() {
-    if (!pinned) return;
-    pinned = false;
-    inner.classList.remove('pinned');
-  }
-
-  /* ── Passive scroll listener (handles non-wheel scrolling
-       like scrollbar drag, programmatic scrollTo, etc.)       */
-  let ticking = false;
-  window.addEventListener('scroll', function() {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      ticking = false;
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const sw = getScrollableWidth();
-      const scrolledPast = -wrapperRect.top;
-
-      if (wrapperRect.top > 0) {
-        // Before section
-        inner.classList.remove('pinned', 'past');
-        inner.style.position = '';
-        inner.style.top = '';
-        targetScrollLeft = 0;
-        currentScrollLeft = 0;
-        scroller.scrollLeft = 0;
-        if (progressBar) progressBar.style.width = '0%';
-        if (hint) hint.classList.remove('hidden');
-      } else if (scrolledPast >= 0 && scrolledPast <= sw) {
-        // Inside pin zone
-        inner.classList.add('pinned');
-        inner.classList.remove('past');
-        inner.style.position = 'fixed';
-        inner.style.top = '0';
-        pinned = true;
-
-        const pct = scrolledPast / sw;
-        targetScrollLeft = pct * sw;
-        currentScrollLeft = targetScrollLeft;
-        scroller.scrollLeft = currentScrollLeft;
-        if (progressBar) progressBar.style.width = (pct * 100) + '%';
-        if (hint) {
-          if (pct > 0.03) hint.classList.add('hidden');
-          else hint.classList.remove('hidden');
-        }
-      } else {
-        // Past section
-        inner.classList.remove('pinned');
-        inner.classList.add('past');
-        inner.style.position = 'absolute';
-        inner.style.top = sw + 'px';
-        pinned = false;
-        targetScrollLeft = sw;
-        currentScrollLeft = sw;
-        scroller.scrollLeft = sw;
-        if (progressBar) progressBar.style.width = '100%';
-        if (hint) hint.classList.add('hidden');
-      }
+  // ── set card min-widths so each fills the viewport ──
+  function sizeCards() {
+    const w = cardWidth();
+    cards.forEach(c => {
+      c.style.minWidth = w + 'px';
+      c.style.maxWidth = w + 'px';
     });
+  }
+
+  // ── slide to index ──
+  function goTo(idx) {
+    idx = Math.max(0, Math.min(total - 1, idx));
+    current = idx;
+
+    const offset = idx * (cardWidth() + GAP);
+    track.style.transform = `translateX(-${offset}px)`;
+
+    // dots
+    dotsWrap.querySelectorAll('.slider-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+    });
+
+    // progress bar
+    bar.style.width = ((idx / (total - 1)) * 100).toFixed(1) + '%';
+
+    // buttons
+    btnPrev.disabled = idx === 0;
+    btnNext.disabled = idx === total - 1;
+  }
+
+  btnPrev.addEventListener('click', () => goTo(current - 1));
+  btnNext.addEventListener('click', () => goTo(current + 1));
+
+  // ── touch / swipe support ──
+  let touchStartX = 0;
+  track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  track.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 40) goTo(dx < 0 ? current + 1 : current - 1);
   }, { passive: true });
+
+  // ── keyboard support (when focused inside section) ──
+  document.getElementById('threats').addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') goTo(current + 1);
+    if (e.key === 'ArrowLeft')  goTo(current - 1);
+  });
+
+  // ── resize: re-size cards and jump without animation ──
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      track.style.transition = 'none';
+      sizeCards();
+      goTo(current);
+      requestAnimationFrame(() => {
+        track.style.transition = '';
+      });
+    }, 100);
+  });
+
+  // ── init ──
+  sizeCards();
+  goTo(0);
 })();
 </script>
 </body>

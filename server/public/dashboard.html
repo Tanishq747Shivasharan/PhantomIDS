@@ -44,11 +44,11 @@
       padding: 0 1.5rem; margin-bottom: 2rem;
       display: flex; align-items: center; gap: 0.6rem;
     }
-    .sidebar-logo .ghost { font-size: 1.8rem; filter: drop-shadow(0 0 10px var(--cyan)); }
+    .sidebar-logo-icon { width: 28px; height: 28px; flex-shrink: 0; }
     .sidebar-logo span {
       font-size: 1.1rem; font-weight: 800;
       background: linear-gradient(135deg, var(--cyan), var(--purple));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
 
     .nav-section { padding: 0 1rem; margin-bottom: 0.4rem; }
@@ -127,7 +127,7 @@
     /* ── Stat Cards ── */
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-bottom: 2rem; }
     .stat-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 6px;
       padding: 1.4rem 1.6rem; position: relative; overflow: hidden;
       transition: border-color 0.2s, transform 0.2s;
     }
@@ -156,7 +156,7 @@
 
     .panel {
       background: var(--card); border: 1px solid var(--border);
-      border-radius: 14px; overflow: hidden;
+      border-radius: 6px; overflow: hidden;
     }
     .panel-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -189,7 +189,7 @@
     .chart-label { font-size: 0.6rem; color: var(--muted); }
 
     /* ── Attack Log Table ── */
-    .table-panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 2rem; }
+    .table-panel { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 2rem; }
     .table-toolbar {
       display: flex; align-items: center; justify-content: space-between;
       padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--border); gap: 1rem; flex-wrap: wrap;
@@ -279,7 +279,7 @@
     /* ── Toast ── */
     .toast {
       position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
-      padding: 0.85rem 1.4rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+      padding: 0.85rem 1.4rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
       color: white; opacity: 0; pointer-events: none;
       transform: translateY(10px); transition: all 0.3s;
       display: flex; align-items: center; gap: 0.5rem;
@@ -292,7 +292,7 @@
     /* ── ML Models Panel ── */
     .ml-panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 2rem; }
     .ml-card {
-      background: var(--card); border-radius: 14px; overflow: hidden;
+      background: var(--card); border-radius: 6px; overflow: hidden;
       border: 1px solid var(--border);
     }
     .ml-card.model1 { border-top: 3px solid var(--cyan); }
@@ -594,7 +594,7 @@
         <div class="ml-card model1">
           <div class="ml-card-header">
             <div>
-              <div class="ml-card-title">🧠 Threat Detection — Logistic Regression</div>
+              <div class="ml-card-title">Threat Detection — Logistic Regression</div>
               <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Trained ML model. Computes P(THREAT) from request behaviour features.</div>
             </div>
             <span class="ml-algo-badge m1">ML Model</span>
@@ -620,7 +620,7 @@
         <div class="ml-card model2">
           <div class="ml-card-header">
             <div>
-              <div class="ml-card-title">🛡️ IP Prevention — 3-Strike Rule Engine</div>
+              <div class="ml-card-title">IP Prevention — 3-Strike Rule Engine</div>
               <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Rule-based prevention. Bans IPs after 3 confirmed THREAT detections.</div>
             </div>
             <span class="ml-algo-badge m2">Rule-Based</span>
@@ -656,7 +656,7 @@
         </div>
         <div class="panel">
           <div class="panel-header">
-            <span class="panel-title">🔴 Live ML Threat Feed</span>
+            <span class="panel-title">Live ML Threat Feed</span>
             <span class="panel-badge" id="feed-count">—</span>
           </div>
           <div class="panel-body" id="ml-feed-body" style="max-height:200px;overflow-y:auto;">
@@ -883,13 +883,13 @@
 
     // ── Clear Logs ────────────────────────────────────────────
     async function clearLogs() {
-      if (!confirm('⚠️ Reset ALL attack logs and IP tracker data?\n\nThis will clear the dashboard for a fresh demonstration.\nThis cannot be undone.')) return;
+      if (!confirm('Reset ALL attack logs and IP tracker data?\n\nThis will clear the dashboard for a fresh demonstration.\nThis cannot be undone.')) return;
       try {
         const res = await fetch('/api/clear-logs', { method: 'DELETE' });
         if (res.status === 401) { showToast('error', 'Session expired — please log in again.'); setTimeout(() => window.location.href = '/login', 1500); return; }
         const d = await res.json();
         if (d.success) {
-          showToast('info', '✓ All logs cleared — ready for fresh demo');
+          showToast('info', 'All logs cleared — ready for fresh demo');
           currentPage = 1;
           allIPRows = [];
           refreshAll();
@@ -961,8 +961,8 @@
         const badge = `<span class="badge ${s.toLowerCase()}"><span class="badge-dot"></span>${s}</span>`;
         const ls = r.last_seen ? new Date(r.last_seen).toLocaleString() : '—';
         const actions = s === 'BANNED'
-          ? `<button class="btn-unban" onclick="unbanIP('${r.ip}', this)">✔ Unban</button>`
-          : `<button class="btn-ban" onclick="banIP('${r.ip}', this)">🚫 Ban</button>`;
+          ? `<button class="btn-unban" onclick="unbanIP('${r.ip}', this)">Unban</button>`
+          : `<button class="btn-ban" onclick="banIP('${r.ip}', this)">Ban IP</button>`;
         return `<tr>
           <td><span class="ip-mono">${r.ip}</span></td>
           <td style="color:var(--muted);">${r.count}</td>
@@ -990,9 +990,9 @@
         } else {
           showToast('error', 'Unban failed');
           btn.disabled = false;
-          btn.textContent = '✔ Unban';
+          btn.textContent = 'Unban';
         }
-      } catch(e) { showToast('error', 'Connection error'); btn.disabled = false; btn.textContent = '✔ Unban'; }
+      } catch(e) { showToast('error', 'Connection error'); btn.disabled = false; btn.textContent = 'Unban'; }
     }
 
     // ── Toast ─────────────────────────────────────────────────
