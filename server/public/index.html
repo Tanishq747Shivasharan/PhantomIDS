@@ -77,8 +77,6 @@ nav {
 }
 #particle-canvas { position: absolute; inset: 0; z-index: 0; }
 
-
-
 @keyframes pulse {
   0%,100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.7); }
@@ -191,31 +189,20 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
   padding: 100px 48px;
 }
 
-/*
-  FIX: The wrapper must have position:relative so that when the inner
-  element exits the pin zone and becomes position:absolute, it anchors
-  correctly to the wrapper (not the document).
-*/
 .threats-pin-wrapper {
   position: relative;
 }
 
-/*
-  FIX: .threats-inner has NO pinned CSS class styles anymore.
-  All positioning is applied via inline style by JS.
-  This avoids CSS-vs-JS conflicts.
-*/
 .threats-inner {
   max-width: 1200px;
   margin: 0 auto;
 }
 
-/* Slider viewport — clips cards, no scroll */
 .timeline-viewport {
   overflow: hidden;
   position: relative;
 }
-/* The track slides via transform */
+
 .timeline-track {
   display: flex;
   gap: 20px;
@@ -223,7 +210,6 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
   will-change: transform;
 }
 
-/* Nav controls row */
 .slider-controls {
   display: flex;
   align-items: center;
@@ -272,7 +258,6 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
   transform: none;
 }
 
-/* Progress bar */
 .timeline-progress {
   height: 3px;
   background: rgba(230,57,70,0.15);
@@ -288,7 +273,7 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
   transition: width 0.4s ease;
 }
 .threat-card {
-  min-width: 280px; flex-shrink: 0;
+  flex-shrink: 0;
   background: var(--card-bg);
   border: 1px solid rgba(230,57,70,0.2);
   border-radius: 12px; padding: 28px;
@@ -492,8 +477,6 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
 .use-case h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 10px; }
 .use-case p { font-size: 14px; color: var(--muted); line-height: 1.6; }
 
-
-
 /* ──────────────────── FOOTER ──────────────────── */
 footer {
   padding: 40px 48px;
@@ -605,7 +588,6 @@ footer {
     <h2 class="section-title aos">SQLi Attack Stories</h2>
     <p class="section-sub aos">This is still happening. Every one of these attacks exploited the same vulnerability — unsanitized SQL input.</p>
 
-    <!-- Slider controls: dots left, prev/next right -->
     <div class="slider-controls">
       <div class="slider-dots" id="slider-dots"></div>
       <div class="slider-btns">
@@ -618,8 +600,7 @@ footer {
       </div>
     </div>
 
-    <!-- Viewport clips the track -->
-    <div class="timeline-viewport">
+    <div class="timeline-viewport" id="timeline-viewport">
       <div class="timeline-track" id="timeline-track">
         <div class="threat-card">
           <div class="threat-year">2023 — MOVEit</div>
@@ -659,7 +640,6 @@ footer {
       </div>
     </div>
 
-    <!-- Progress bar -->
     <div class="timeline-progress">
       <div class="timeline-progress-bar" id="timeline-progress-bar"></div>
     </div>
@@ -1140,67 +1120,73 @@ async function handleRegister(btn) {
 // ──────────── CARD SLIDER — THREAT TIMELINE ────────────
 (function () {
   const track    = document.getElementById('timeline-track');
+  const viewport = document.getElementById('timeline-viewport');
   const dotsWrap = document.getElementById('slider-dots');
   const btnPrev  = document.getElementById('slider-prev');
   const btnNext  = document.getElementById('slider-next');
   const bar      = document.getElementById('timeline-progress-bar');
+  const cards    = Array.from(track.querySelectorAll('.threat-card'));
+  const GAP      = 20;
 
-  if (!track) return;
+  // Slide groups: [startCardIndex, numberOfCardsVisible]
+  const slides = [
+    [0, 3],  // Slide 1: show cards 0, 1, 2
+    [3, 2]   // Slide 2: show cards 3, 4
+  ];
+  let current = 0;
 
-  const cards     = Array.from(track.querySelectorAll('.threat-card'));
-  const total     = cards.length;
-  const GAP       = 20; // matches CSS gap
-  let current     = 0;
-
-  // ── build dot indicators ──
-  cards.forEach((_, i) => {
+  // Build dots — one per slide group
+  slides.forEach((_, i) => {
     const dot = document.createElement('button');
     dot.className = 'slider-dot' + (i === 0 ? ' active' : '');
-    dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    dot.setAttribute('aria-label', 'Slide ' + (i + 1));
     dot.addEventListener('click', () => goTo(i));
     dotsWrap.appendChild(dot);
   });
 
-  // ── card width = viewport width (full-width one card at a time) ──
-  function cardWidth() {
-    // Each card fills the viewport minus gaps on either side
-    return track.parentElement.offsetWidth;
-  }
-
-  // ── set card min-widths so each fills the viewport ──
+  // Size every card according to the slide group it belongs to
   function sizeCards() {
-    const w = cardWidth();
-    cards.forEach(c => {
-      c.style.minWidth = w + 'px';
-      c.style.maxWidth = w + 'px';
+    const vw = viewport.offsetWidth;
+    slides.forEach(([startIdx, count]) => {
+      const cardW = (vw - GAP * (count - 1)) / count;
+      for (let i = startIdx; i < startIdx + count; i++) {
+        cards[i].style.minWidth = cardW + 'px';
+        cards[i].style.maxWidth = cardW + 'px';
+      }
     });
   }
 
-  // ── slide to index ──
+  // Slide to a given index
   function goTo(idx) {
-    idx = Math.max(0, Math.min(total - 1, idx));
+    idx = Math.max(0, Math.min(slides.length - 1, idx));
     current = idx;
 
-    const offset = idx * (cardWidth() + GAP);
+    // Calculate pixel offset = sum of all preceding slide group widths + gaps between groups
+    const vw = viewport.offsetWidth;
+    let offset = 0;
+    for (let s = 0; s < idx; s++) {
+      const [, count] = slides[s];
+      const cardW = (vw - GAP * (count - 1)) / count;
+      // Total width of this slide group = (cardW * count) + gaps between cards in group
+      // Plus one extra GAP to separate this group from the next
+      offset += cardW * count + GAP * count;
+    }
+
     track.style.transform = `translateX(-${offset}px)`;
 
-    // dots
     dotsWrap.querySelectorAll('.slider-dot').forEach((d, i) => {
       d.classList.toggle('active', i === idx);
     });
 
-    // progress bar
-    bar.style.width = ((idx / (total - 1)) * 100).toFixed(1) + '%';
-
-    // buttons
+    bar.style.width = (idx / (slides.length - 1) * 100).toFixed(1) + '%';
     btnPrev.disabled = idx === 0;
-    btnNext.disabled = idx === total - 1;
+    btnNext.disabled = idx === slides.length - 1;
   }
 
   btnPrev.addEventListener('click', () => goTo(current - 1));
   btnNext.addEventListener('click', () => goTo(current + 1));
 
-  // ── touch / swipe support ──
+  // Touch / swipe support
   let touchStartX = 0;
   track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
   track.addEventListener('touchend', e => {
@@ -1208,13 +1194,13 @@ async function handleRegister(btn) {
     if (Math.abs(dx) > 40) goTo(dx < 0 ? current + 1 : current - 1);
   }, { passive: true });
 
-  // ── keyboard support (when focused inside section) ──
+  // Keyboard support when focused inside the threats section
   document.getElementById('threats').addEventListener('keydown', e => {
     if (e.key === 'ArrowRight') goTo(current + 1);
     if (e.key === 'ArrowLeft')  goTo(current - 1);
   });
 
-  // ── resize: re-size cards and jump without animation ──
+  // Resize: re-size cards and re-jump without animation
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
@@ -1222,13 +1208,11 @@ async function handleRegister(btn) {
       track.style.transition = 'none';
       sizeCards();
       goTo(current);
-      requestAnimationFrame(() => {
-        track.style.transition = '';
-      });
+      requestAnimationFrame(() => { track.style.transition = ''; });
     }, 100);
   });
 
-  // ── init ──
+  // Init
   sizeCards();
   goTo(0);
 })();
