@@ -4,12 +4,12 @@
 // ─── CONFIGURATION ─────────────────────────────────────────────────────────
 const char* SSID          = "Fibercity (Shivsharan)";
 const char* PASSWORD      = "2172316065";
-const char* HONEYPOT_IP   = "192.168.1.2";
+const char* HONEYPOT_IP   = "192.168.1.3";
 const int   HONEYPOT_PORT = 5000;
 const int   LISTEN_PORT   = 5000;
 
 // Static IP for the ESP32 sensor
-IPAddress local_IP(192, 168, 1, 30);
+IPAddress local_IP(192, 168, 1, 30); // ESP32 static ip
 IPAddress gateway(192, 168, 1,  1);
 IPAddress subnet(255, 255, 255,  0);
 IPAddress dns(8, 8, 8, 8);
@@ -33,7 +33,7 @@ const char* SQL_KEYWORDS[] = {
   " OR ", " AND ", "UNION", "SELECT", "INSERT",
   "DROP", "DELETE", "UPDATE", "FROM", "WHERE",
   "SLEEP", "BENCHMARK", "HAVING", "ORDER BY",
-  "--", "/*", "#", "1=1", "1 =1", "xp_"
+  "--", "/*", "#", "1=1", "1 = 1", "xp_"
 };
 const int KEYWORD_COUNT = 20;
 

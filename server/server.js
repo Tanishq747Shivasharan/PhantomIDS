@@ -1,85 +1,61 @@
+'use strict';
+
 const express = require('express');
 const session = require('express-session');
-const path = require('path');
-const fs = require('fs');
+const path    = require('path');
+const os      = require('os');
 
-// ── Init DB first (creates tables + seeds data) ──────────────
-const db = require('./src/db/database');
-
-// ── Middleware ────────────────────────────────────────────────
-const requestLogger = require('./src/middleware/logger');
+const db             = require('./src/db/database');
+const requestLogger  = require('./src/middleware/logger');
 const threatDetector = require('./src/middleware/threatDetector');
-
-// ── Routes ────────────────────────────────────────────────────
-const honeypotRoutes  = require('./src/routes/honeypot');
-const authRoutes      = require('./src/routes/auth');
+const honeypotRoutes = require('./src/routes/honeypot');
+const authRoutes     = require('./src/routes/auth');
 const dashboardRoutes = require('./src/routes/dashboard');
 const mlStatusRoutes  = require('./src/routes/mlStatus');
 
-const app = express();
+const app  = express();
+const HOST = '0.0.0.0';
+const PORT = 5000;
 
-// ── Body Parsers ──────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── Session ───────────────────────────────────────────────────
 app.use(session({
   secret: 'PhantomIDS-SecretKey-2024-xK9#mP!',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,        // set true if behind HTTPS
+    secure: false,
     httpOnly: true,
-    maxAge: 8 * 60 * 60 * 1000  // 8 hours
-  }
+    maxAge: 8 * 60 * 60 * 1000,
+  },
 }));
 
-// ── Logging (flat-file) ───────────────────────────────────────
 app.use(requestLogger);
-
-// ── Threat Detection (3-Strikes per IP) ──────────────────────
 app.use(threatDetector);
-
-// ── Static Files ──────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Mount Routes ──────────────────────────────────────────────
 app.use('/', honeypotRoutes);
 app.use('/', authRoutes);
 app.use('/', dashboardRoutes);
-app.use('/', mlStatusRoutes);  // ML model status & analysis API
+app.use('/', mlStatusRoutes);
 
-// ── SPA Fallback for HTML pages ───────────────────────────────
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-app.get('/honeypot', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'honeypot.html'));
-});
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+app.get('/honeypot',  (req, res) => res.sendFile(path.join(__dirname, 'public', 'honeypot.html')));
+app.get('/login',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
-// ── 404 Fallback (return bait-like response for scanners) ─────
+// Bait 404 response — mimics a real Apache server to keep scanners probing
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found', server: 'Apache/2.4.41 (Ubuntu)' });
 });
 
-// ── Error Handler ─────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error('[Server Error]', err.message);
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// ── Start ─────────────────────────────────────────────────────
-const HOST = '0.0.0.0';
-const PORT = 5000;
-
-// Detect local LAN IP dynamically
-const os = require('os');
 function getLanIP() {
-  const nets = os.networkInterfaces();
-  for (const iface of Object.values(nets)) {
+  for (const iface of Object.values(os.networkInterfaces())) {
     for (const net of iface) {
       if (net.family === 'IPv4' && !net.internal) return net.address;
     }
@@ -92,13 +68,12 @@ app.listen(PORT, HOST, () => {
   console.log('\n╔══════════════════════════════════════════════════╗');
   console.log('║          PhantomIDS — Node.js Server             ║');
   console.log('╠══════════════════════════════════════════════════╣');
-  console.log(`║  Local         : http://localhost:${PORT}            ║`);
-  console.log(`║  LAN           : http://${LAN}:${PORT}         ║`);
-  console.log(`║  Honeypot      : http://${LAN}:${PORT}/honeypot ║`);
-  console.log(`║  Admin Login   : http://${LAN}:${PORT}/login    ║`);
-  console.log(`║  Dashboard     : http://${LAN}:${PORT}/dashboard ║`);
+  console.log(`║  Local   : http://localhost:${PORT}                  ║`);
+  console.log(`║  LAN     : http://${LAN}:${PORT}             ║`);
+  console.log(`║  Login   : http://${LAN}:${PORT}/login        ║`);
+  console.log(`║  Dashboard: http://${LAN}:${PORT}/dashboard   ║`);
   console.log('╠══════════════════════════════════════════════════╣');
-  console.log('║  Admin Creds  : phantom_admin / PhantomAdmin@2024 ║');
+  console.log('║  Creds   : phantom_admin / PhantomAdmin@2024     ║');
   console.log('╚══════════════════════════════════════════════════╝\n');
 });
 

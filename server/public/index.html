@@ -203,12 +203,10 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
 #threats {
   background: linear-gradient(180deg, transparent, rgba(230,57,70,0.03), transparent);
   max-width: 100% !important;
+  padding-top: 0; padding-bottom: 0;
 }
 .threats-pin-wrapper {
   position: relative;
-}
-.threats-pin-wrapper.pinned {
-  /* height set dynamically via JS */
 }
 .threats-inner {
   position: relative;
@@ -222,19 +220,25 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
   background: var(--bg);
   padding: 100px 48px;
   max-width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .threats-inner.past {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
+  padding: 100px 48px;
 }
 .timeline-scroll {
   display: flex; gap: 20px; overflow-x: hidden;
   padding-bottom: 16px;
-  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  scrollbar-width: none;
   position: relative;
 }
+.timeline-scroll::-webkit-scrollbar { display: none; }
 .timeline-scroll-hint {
   position: absolute;
   bottom: 24px;
@@ -254,10 +258,10 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
 }
 .timeline-scroll-hint.hidden { opacity: 0; }
 .timeline-progress {
-  height: 2px;
+  height: 3px;
   background: rgba(230,57,70,0.15);
   border-radius: 2px;
-  margin-top: 12px;
+  margin-top: 16px;
   overflow: hidden;
 }
 .timeline-progress-bar {
@@ -265,7 +269,7 @@ section { padding: 100px 48px; max-width: 1200px; margin: 0 auto; }
   width: 0%;
   background: linear-gradient(90deg, var(--red), var(--accent));
   border-radius: 2px;
-  transition: width 0.05s linear;
+  transition: width 0.15s ease-out;
 }
 .threat-card {
   min-width: 280px; flex-shrink: 0;
@@ -1352,83 +1356,182 @@ async function handleRegister(btn) {
   const progressBar = document.getElementById('timeline-progress-bar');
   if (!wrapper || !inner || !scroller) return;
 
-  // Calculate how much extra scroll height we need
-  // (total scrollable width of the timeline)
+  /* How far the timeline can scroll horizontally */
   function getScrollableWidth() {
     return Math.max(0, scroller.scrollWidth - scroller.clientWidth);
   }
 
+  /* Set the wrapper tall enough so the page "knows" there's a
+     pinned section occupying extra vertical room.  This keeps
+     sections below in the right position after un-pin.           */
   function setupPinHeight() {
-    const extraScroll = getScrollableWidth();
-    const innerHeight = inner.offsetHeight;
-    // Wrapper height = inner section height + extra scroll distance for horizontal travel
-    wrapper.style.height = (innerHeight + extraScroll) + 'px';
+    const sw = getScrollableWidth();
+    const ih = inner.getBoundingClientRect().height || inner.offsetHeight;
+    wrapper.style.height = (ih + sw) + 'px';
   }
-
   setupPinHeight();
   window.addEventListener('resize', setupPinHeight);
 
-  // Use requestAnimationFrame for smooth updates
-  let ticking = false;
+  /* ── Smooth scroll accumulator ──────────────────────────
+     We accumulate raw wheel deltaY and lerp with rAF so the
+     horizontal glide feels buttery.                              */
+  let targetScrollLeft = 0;   // where we want to be
+  let currentScrollLeft = 0;  // where we are (animated)
+  let pinned = false;
+  let rafId = null;
+  const LERP = 0.12;         // smoothing factor
 
-  function onScroll() {
+  function animate() {
+    const diff = targetScrollLeft - currentScrollLeft;
+    if (Math.abs(diff) < 0.5) {
+      currentScrollLeft = targetScrollLeft;
+    } else {
+      currentScrollLeft += diff * LERP;
+    }
+    scroller.scrollLeft = currentScrollLeft;
+
+    // Progress bar
+    const sw = getScrollableWidth();
+    const pct = sw > 0 ? currentScrollLeft / sw : 0;
+    if (progressBar) progressBar.style.width = (pct * 100).toFixed(2) + '%';
+    if (hint) {
+      if (pct > 0.03) hint.classList.add('hidden');
+      else hint.classList.remove('hidden');
+    }
+
+    if (Math.abs(diff) > 0.5) {
+      rafId = requestAnimationFrame(animate);
+    } else {
+      rafId = null;
+    }
+  }
+
+  function startAnim() {
+    if (!rafId) rafId = requestAnimationFrame(animate);
+  }
+
+  /* ── Wheel event interceptor ─────────────────────────── */
+  window.addEventListener('wheel', function(e) {
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const sw = getScrollableWidth();
+    if (sw <= 0) return;  // nothing to scroll
+
+    const scrolledPast = -wrapperRect.top;
+    const scrollingDown = e.deltaY > 0;
+    const scrollingUp   = e.deltaY < 0;
+
+    // Phase 1: section hasn't entered viewport yet → allow normal scroll
+    if (wrapperRect.top > 0) {
+      unpin();
+      return;
+    }
+
+    // Phase 3: we've scrolled past the pinned distance → allow normal scroll
+    if (scrolledPast > sw + 5) {
+      unpin();
+      return;
+    }
+
+    // Phase 2: inside the pinned zone — decide whether to capture
+    const nearStart = targetScrollLeft <= 2;
+    const nearEnd   = targetScrollLeft >= sw - 2;
+
+    // At start and scrolling up → release upward
+    if (nearStart && scrollingUp) {
+      unpin();
+      return;
+    }
+
+    // At end and scrolling down → release downward
+    if (nearEnd && scrollingDown) {
+      // Snap the target so next passive scroll sees it as "past"
+      targetScrollLeft = sw;
+      currentScrollLeft = sw;
+      scroller.scrollLeft = sw;
+      unpin();
+      return;
+    }
+
+    // ── Lock the page and translate vertical wheel to horizontal ──
+    e.preventDefault();
+    pin();
+
+    // Accumulate into target (scale delta for faster, comfortable speed)
+    const delta = e.deltaY * 2.0;
+    targetScrollLeft = Math.max(0, Math.min(sw, targetScrollLeft + delta));
+    startAnim();
+  }, { passive: false });
+
+  /* ── Pin / Unpin helpers ──────────────────────────────── */
+  function pin() {
+    if (pinned) return;
+    pinned = true;
+    inner.classList.add('pinned');
+    inner.classList.remove('past');
+    inner.style.position = 'fixed';
+    inner.style.top = '0';
+  }
+
+  function unpin() {
+    if (!pinned) return;
+    pinned = false;
+    inner.classList.remove('pinned');
+  }
+
+  /* ── Passive scroll listener (handles non-wheel scrolling
+       like scrollbar drag, programmatic scrollTo, etc.)       */
+  let ticking = false;
+  window.addEventListener('scroll', function() {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
       ticking = false;
       const wrapperRect = wrapper.getBoundingClientRect();
-      const scrollableWidth = getScrollableWidth();
-      const innerHeight = inner.offsetHeight;
-
-      // How far the wrapper's top has scrolled past the viewport top
+      const sw = getScrollableWidth();
       const scrolledPast = -wrapperRect.top;
-      // Total scrollable distance in the wrapper (extra height we added)
-      const totalScrollDist = scrollableWidth;
 
       if (wrapperRect.top > 0) {
-        // Not yet reached — static position
+        // Before section
         inner.classList.remove('pinned', 'past');
         inner.style.position = '';
         inner.style.top = '';
+        targetScrollLeft = 0;
+        currentScrollLeft = 0;
         scroller.scrollLeft = 0;
-      } else if (scrolledPast >= 0 && scrolledPast <= totalScrollDist) {
-        // Pinned state — fix the section and scroll horizontally
+        if (progressBar) progressBar.style.width = '0%';
+        if (hint) hint.classList.remove('hidden');
+      } else if (scrolledPast >= 0 && scrolledPast <= sw) {
+        // Inside pin zone
         inner.classList.add('pinned');
         inner.classList.remove('past');
         inner.style.position = 'fixed';
         inner.style.top = '0';
+        pinned = true;
 
-        // Map vertical scroll progress to horizontal scroll
-        const progress = scrolledPast / totalScrollDist;
-        scroller.scrollLeft = progress * scrollableWidth;
-
-        // Update progress bar
-        if (progressBar) {
-          progressBar.style.width = (progress * 100) + '%';
-        }
-
-        // Hide/show hint
+        const pct = scrolledPast / sw;
+        targetScrollLeft = pct * sw;
+        currentScrollLeft = targetScrollLeft;
+        scroller.scrollLeft = currentScrollLeft;
+        if (progressBar) progressBar.style.width = (pct * 100) + '%';
         if (hint) {
-          if (progress > 0.05) hint.classList.add('hidden');
+          if (pct > 0.03) hint.classList.add('hidden');
           else hint.classList.remove('hidden');
         }
-      } else if (scrolledPast > totalScrollDist) {
-        // Past — position at bottom of wrapper
+      } else {
+        // Past section
         inner.classList.remove('pinned');
         inner.classList.add('past');
         inner.style.position = 'absolute';
-        inner.style.top = totalScrollDist + 'px';
-        scroller.scrollLeft = scrollableWidth;
-
+        inner.style.top = sw + 'px';
+        pinned = false;
+        targetScrollLeft = sw;
+        currentScrollLeft = sw;
+        scroller.scrollLeft = sw;
         if (progressBar) progressBar.style.width = '100%';
         if (hint) hint.classList.add('hidden');
       }
     });
-  }
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-  // Initial call
-  onScroll();
+  }, { passive: true });
 })();
 </script>
 </body>

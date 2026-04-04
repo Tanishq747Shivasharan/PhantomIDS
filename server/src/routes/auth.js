@@ -1,13 +1,10 @@
+'use strict';
+
 const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcryptjs');
-const db = require('../db/database');
+const router  = express.Router();
+const bcrypt  = require('bcryptjs');
+const db      = require('../db/database');
 
-// ============================================================
-// SECURE ADMIN AUTHENTICATION (parameterized queries only)
-// ============================================================
-
-// POST /admin/login
 router.post('/admin/login', (req, res) => {
   const { username, password } = req.body;
 
@@ -16,30 +13,23 @@ router.post('/admin/login', (req, res) => {
   }
 
   try {
-    // Parameterized query — NOT vulnerable
     const admin = db.prepare('SELECT * FROM admins WHERE username = ?').get(username);
 
-    if (!admin) {
+    if (!admin || !bcrypt.compareSync(password, admin.password)) {
       return res.status(401).json({ success: false, message: 'Invalid credentials.' });
     }
 
-    const match = bcrypt.compareSync(password, admin.password);
-    if (!match) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials.' });
-    }
-
-    // Set secure session
     req.session.admin = {
-      id: admin.id,
-      username: admin.username,
-      org: admin.org,
-      loggedInAt: new Date().toISOString()
+      id:          admin.id,
+      username:    admin.username,
+      org:         admin.org,
+      loggedInAt:  new Date().toISOString(),
     };
 
     return res.json({
       success: true,
       message: 'Login successful.',
-      admin: { username: admin.username, org: admin.org }
+      admin: { username: admin.username, org: admin.org },
     });
   } catch (err) {
     console.error('[Auth] Login error:', err.message);
@@ -47,14 +37,10 @@ router.post('/admin/login', (req, res) => {
   }
 });
 
-// POST /admin/logout
 router.post('/admin/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true, message: 'Logged out.' });
-  });
+  req.session.destroy(() => res.json({ success: true, message: 'Logged out.' }));
 });
 
-// GET /admin/me — check session
 router.get('/admin/me', (req, res) => {
   if (!req.session.admin) {
     return res.status(401).json({ authenticated: false });

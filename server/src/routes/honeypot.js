@@ -1,26 +1,15 @@
+'use strict';
+
 const express = require('express');
-const router = express.Router();
-const db = require('../db/database');
+const router  = express.Router();
+const db      = require('../db/database');
 
-// ============================================================
-// INTENTIONALLY VULNERABLE HONEYPOT LOGIN
-// Purpose: Attract and log SQL injection attacks from sqlmap
-// WARNING: This is deliberately insecure by design.
-// ============================================================
-
-// BUG FIX: Declare lastEsp32Ping here at module scope so it is accessible
-// in the /api/esp32/alert route handler (line ~141) without hoisting issues.
 let lastEsp32Ping = null;
 
 function logAttack(req, payload) {
-  // Prefer X-Forwarded-For set by ESP32 (real attacker IP)
-  const ip = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress || 'unknown';
+  const ip        = req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress || 'unknown';
   const userAgent = req.headers['user-agent'] || 'unknown';
-  const method = req.method;
-  const urlPath = req.originalUrl;
-
-  // Determine status from threat detector
-  const status = req.ipStatus || (() => {
+  const status    = req.ipStatus || (() => {
     const tracker = db.prepare('SELECT status FROM ip_tracker WHERE ip = ?').get(ip);
     return tracker ? tracker.status : 'NORMAL';
   })();
@@ -29,41 +18,38 @@ function logAttack(req, payload) {
     db.prepare(`
       INSERT INTO attack_log (ip, method, path, payload, user_agent, status)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(ip, method, urlPath, payload, userAgent, status);
+    `).run(ip, req.method, req.originalUrl, payload, userAgent, status);
   } catch (err) {
     console.error('[Honeypot] DB log error:', err.message);
   }
 }
 
-// POST /login — INTENTIONALLY VULNERABLE SQL INJECTION ENDPOINT
+// Intentionally vulnerable login endpoint — DO NOT sanitize
 router.post('/login', (req, res) => {
   const { username = '', password = '' } = req.body;
-
-  // Capture full payload for logging
   const payload = `username=${username}&password=${password}`;
-  logAttack(req, payload);
 
-  // ⚠️  DELIBERATE SQL INJECTION VULNERABILITY — DO NOT SANITIZE
+  // Skip logging for ESP32-forwarded requests — /api/esp32/alert handles those
+  if (!req.headers['x-forwarded-for']) {
+    logAttack(req, payload);
+  }
+
   const query = `SELECT * FROM users WHERE username='${username}' AND password='${password}'`;
-
-  let result = null;
+  let result   = null;
   let sqlError = null;
 
   try {
     result = db.prepare(query).get();
   } catch (err) {
     sqlError = err.message;
-    // Log the SQL error payload too — valuable for IDS
     console.log(`[Honeypot] SQL Error from ${req.ip}: ${err.message}`);
   }
 
-  // Return realistic responses to keep sqlmap probing
   if (sqlError) {
-    // Return a plausible server error (not a 500 that kills sqlmap)
     return res.status(200).json({
       success: false,
       message: 'An internal error occurred. Please try again.',
-      debug: sqlError   // intentional "accidental" debug leak — bait
+      debug: sqlError,
     });
   }
 
@@ -72,27 +58,19 @@ router.post('/login', (req, res) => {
       success: true,
       message: `Welcome back, ${result.username}!`,
       role: result.role,
-      redirect: '/employee-portal'
+      redirect: '/employee-portal',
     });
   }
 
-  return res.status(200).json({
-    success: false,
-    message: 'Invalid username or password.'
-  });
+  return res.status(200).json({ success: false, message: 'Invalid username or password.' });
 });
 
-// GET /honeypot-status — for admin to verify honeypot is live
 router.get('/honeypot-status', (req, res) => {
   const count = db.prepare('SELECT COUNT(*) as total FROM attack_log').get();
   res.json({ status: 'ACTIVE', total_attacks_logged: count.total });
 });
 
-// ============================================================
-// POST /api/esp32/alert — ESP32 hardware sensor alert ingest
-// ESP32 POSTs here when it detects a confirmed SQLi (score >= 2):
-//   { "attacker_ip": "192.168.1.7", "payload": "...", "score": 2 }
-// ============================================================
+// ESP32 posts here when it detects SQLi: { attacker_ip, payload, score }
 router.post('/api/esp32/alert', (req, res) => {
   const { attacker_ip, payload, score } = req.body;
 
@@ -104,21 +82,16 @@ router.post('/api/esp32/alert', (req, res) => {
   const severity = score >= 2 ? 'BANNED' : 'THREAT';
 
   try {
-    // The forwarded request already created a row with the real attacker IP.
-    // Update the most recent row from this IP within the last 5 seconds.
+    // Update the most recent row from this IP (forwarded by ESP32) within 30s
     const updated = db.prepare(`
-      UPDATE attack_log
-      SET status = ?
+      UPDATE attack_log SET status = ?
       WHERE id = (
         SELECT id FROM attack_log
-        WHERE ip = ?
-        AND timestamp >= datetime('now', '-5 seconds')
-        ORDER BY id DESC
-        LIMIT 1
+        WHERE ip = ? AND datetime(timestamp) >= datetime('now', '-30 seconds')
+        ORDER BY id DESC LIMIT 1
       )
     `).run(severity, ip);
 
-    // If no existing row (direct ESP32 alert with no forwarded request), insert one
     if (updated.changes === 0) {
       db.prepare(`
         INSERT INTO attack_log (ip, method, path, payload, user_agent, status)
@@ -126,13 +99,11 @@ router.post('/api/esp32/alert', (req, res) => {
       `).run(ip, payload || '', severity);
     }
 
-    // Upsert ip_tracker
     const existing = db.prepare('SELECT * FROM ip_tracker WHERE ip = ?').get(ip);
     if (existing) {
       db.prepare(`
         UPDATE ip_tracker
-        SET threat_count = threat_count + 1,
-            status = CASE WHEN status != 'BANNED' THEN ? ELSE 'BANNED' END
+        SET status = CASE WHEN status != 'BANNED' THEN ? ELSE 'BANNED' END
         WHERE ip = ?
       `).run(severity, ip);
     } else {
@@ -143,8 +114,7 @@ router.post('/api/esp32/alert', (req, res) => {
     }
 
     lastEsp32Ping = Date.now();
-
-    console.log(`[ESP32] ${score >= 2 ? '🚨 CRITICAL' : '⚠️  WARNING'} from ${ip} — status set to ${severity}`);
+    console.log(`[ESP32] ${score >= 2 ? 'CRITICAL' : 'WARNING'} from ${ip} — ${severity}`);
     return res.status(201).json({ status: 'ok', message: 'Alert logged', severity });
   } catch (err) {
     console.error('[ESP32] Alert ingest error:', err.message);
@@ -152,24 +122,17 @@ router.post('/api/esp32/alert', (req, res) => {
   }
 });
 
-// ============================================================
-// GET /api/esp32/status — Hardware sensor heartbeat
-// ESP32 can ping this, or dashboard polls it to show sensor state
-// ============================================================
-// NOTE: lastEsp32Ping is declared at the top of this file (module scope)
-
 router.post('/api/esp32/ping', (req, res) => {
   lastEsp32Ping = Date.now();
   res.json({ status: 'ok' });
 });
 
 router.get('/api/esp32/status', (req, res) => {
-  const OFFLINE_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes — generous for slow networks
-  const online = lastEsp32Ping && (Date.now() - lastEsp32Ping) < OFFLINE_THRESHOLD_MS;
+  const online = lastEsp32Ping && (Date.now() - lastEsp32Ping) < 3 * 60 * 1000;
   res.json({
     online: !!online,
     last_ping: lastEsp32Ping ? new Date(lastEsp32Ping).toISOString() : null,
-    sensor_ip: '192.168.1.30'
+    sensor_ip: '192.168.1.30',
   });
 });
 
